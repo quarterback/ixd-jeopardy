@@ -1,6 +1,6 @@
 # Design Jeopardy: full answer key
 
-Every question in `bank.js`, with its right answer. The game shuffles the A to D order every time it draws boards, so letters only exist in the in game key (Answer key button). Use this one to review the bank or print it before class.
+Every question in `bank.js` with its right answer. The game shuffles the A to D order each time it draws boards, so letters only appear in the in game answer key. Use this file to review or print the whole bank.
 
 ## UX Laws
 
@@ -177,24 +177,8 @@ Every question in `bank.js`, with its right answer. The game shuffles the A to D
 | Medium | Which error message does its job best? | **Enter a date in the future, like 10/20/2026** |
 | Hard | Before button labels or layouts, some writers recommend starting interface work in which tool? | **A plain text editor** |
 | Hard | Designing for a person who is panicked, grieving or rushed, instead of the calm average user, is designing for... | **Stress cases** |
-| Hardest | A pool page lists classes as SS, SB1, SB2 and ST1 with no names. Which writing rule does it break? | **Don't use internal codes as labels** |
+| Hardest | A pool schedule lists classes as SS, SB1, SB2 and ST1 with no names. Which writing rule does it break? | **Don't use internal codes as labels** |
 | Hardest | Writing so people can find what they need, understand it and use it the first time they read it is called... | **Plain language** |
-
-## Our Class
-
-| Level | Question | Answer |
-| --- | --- | --- |
-| Easy | Which design kit did teams build their sprint screens from? | **Material 3** |
-| Easy | In the Riverton IA lab, friction is any moment where you have to stop, search, remember or... | **Guess** |
-| Medium | The SpeedyBeans owner wanted a regular customer to finish ordering in under how long? | **60 seconds** |
-| Medium | The YumBowl manager wanted how many choices or fewer before the review step? | **Four** |
-| Medium | In the Riverton IA lab, "The words don't match what's behind them" is which problem type? | **Label** |
-| Hard | The Riverton home page shows four alerts at once, sorted by nothing. Which problem type? | **Too much** |
-| Hard | The rental request form lives on the Contact Us page. Which problem type? | **Wrong page** |
-| Hard | The Riverton 311 city client wanted what on every single report? | **A ticket number** |
-| Hardest | When a Riverton Rec swim class fills up while a parent is registering, the design had to... | **Keep what they entered and move them to the waitlist** |
-| Hardest | "Get Started" explains how to register only in its last section. Which Riverton problem type? | **Sequence** |
-| Hardest | The class schedule lists SB2 but its description lives on another page, so a parent needs three pages to pick a class. Which problem type? | **Missing connection** |
 
 ## Building for the Web
 
@@ -209,7 +193,7 @@ Every question in `bank.js`, with its right answer. The game shuffles the A to D
 | Hardest | You're on logs/week3.html. Which link goes back to the index.html one folder up? | **../index.html** |
 | Hardest | Which CSS property sets the space inside an element's border? | **padding** |
 
-## Daily Doubles (visual and video)
+## Daily Doubles
 
 | Category | Question | Answer |
 | --- | --- | --- |
@@ -217,8 +201,8 @@ Every question in `bank.js`, with its right answer. The game shuffles the A to D
 | Affordances | Watch the clip. What makes a door a Norman door? | **Its design sends the wrong signal, so it needs a sign** |
 | Accessibility | A rider without a smartphone reaches this gate. What is the core design problem? | **It offers only one way in, so it locks out anyone without that device** |
 | Wayfinding & Cities | This is a resident's sketch map. In Kevin Lynch's terms, the highlighted river is a... | **Edge** |
-| Our Class | In Riverton IA lab terms, what is the main problem with this home page? | **Hierarchy** |
-| Our Class | This Riverton 311 screen answers which research finding from the sprint? | **The same light often gets reported several times, which slows the queue** |
+| Information Architecture | A city pool website opens like this. What is the biggest problem? | **Weak hierarchy: every option has the same weight, so nothing stands out** |
+| Screens & States | A city app shows this when you try to report a broken streetlight. What problem is the screen designed to prevent? | **Many people filing duplicate reports of the same problem** |
 | UX Laws | Why is it so hard to close this ad on a phone? | **Fitts's law: the target is tiny and far from your thumb** |
 
 ## Final wager pool
