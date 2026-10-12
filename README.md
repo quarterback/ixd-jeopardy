@@ -1,53 +1,46 @@
-# Lock It In: UT330
+# Design Jeopardy
 
-A host controlled quiz game for running interaction design review live over Zoom. Every team answers every question at the same time, so nobody waits for a turn and nobody fights Zoom lag on a buzzer.
+A quiz board for reviewing interaction design live over Zoom. The host shares their screen. Every team answers every square, and captains send their answer to the host by Zoom DM.
 
-## Running it
+## Deploying
 
-Open `index.html` in a browser, or turn on GitHub Pages for this repo (Settings, Pages, deploy from `main`) and share your screen from that page. Everything runs in the browser; scores save in that browser as you play, so a refresh won't lose the game.
+There is no build step. The site is four files: `index.html`, `styles.css`, `bank.js` and `game.js`. On Netlify or Vercel, point a new site at this repo with no build command and the root folder as the publish directory. You can also open `index.html` straight from your computer.
 
-## How a question runs
+## Before class
 
-1. Show the question. Press **Space** to start the clock.
-2. Teams talk it over in their own team chat.
-3. When time is up, count down "3, 2, 1, send." Captains send one letter in the Zoom chat at the same moment.
-4. Click each team's letter on its card, then press **R** to reveal.
-5. Press **→** for the next question.
+1. Open the site and enter the team names (five by default, up to eight).
+2. Choose rounds, categories per board, questions per category, the answer clock, and whether the first correct DM earns a bonus.
+3. Click **Draw boards and start**. Each round draws a fresh board at random from the bank, so no two games are the same.
+4. Click **Answer key**. It opens in its own window with the letters for this game's boards. Keep that window off the screen you share.
 
-Daily Doubles and the Final Wager open on a splash screen. Captains DM you their wager, you type it into each team card, then press **Enter** to show the question.
+## Running a square
 
-## Scoring
+1. The team on the gold card picks a category and value. Click it.
+2. Read the question aloud. The answers stay hidden.
+3. Press **Space**. The clock starts and the four answers appear.
+4. Captains DM you a letter. Click each team's letter on its card. If you're using the bonus, click **First in** on the team whose correct DM arrived first.
+5. Press **R** to reveal. Press **B** to go back to the board. The next team in order picks.
 
-| Situation | Points |
-| --- | --- |
-| Right answer | The question's value (100, 200, 300, 500) |
-| Wrong answer | 0 |
-| Double lifeline | Twice the value |
-| Someone else used 50:50 | Half the value |
-| Daily Double | Plus or minus the wager. Max wager is the team's score, or 500 if lower |
-| Final Wager | Plus or minus the wager. Max wager is the team's score |
+**Double**: once per game, a team can double one square. The captain says so in their DM before the clock starts, and you click **Double** on their card.
 
-Each team gets each lifeline once per game. Clicking an active lifeline again on the same question undoes it. The scoreboard (**S**) has plus and minus 100 buttons for fixing a score by hand.
+**Daily Doubles** are visual or video squares. Captains DM you their wager, you type it in, then press **R** to show the question. A wager can go up to the team's score, or up to the board's top value if the team has less.
 
-## Keyboard
+**Final wager**: after the last board, teams bet any part of their score.
+
+## Keys
 
 | Key | Does |
 | --- | --- |
-| Space | Start or stop the clock |
-| R | Reveal or hide the answer |
-| Enter | Show the question after a Daily Double or Final Wager splash |
-| → / ← | Next or previous question |
-| S | Scoreboard |
+| Space | Start the clock and show the answers |
+| R or Enter | Show the question, show the answers, or reveal |
+| B | Back to the board |
+| S | Scoreboard, with plus and minus 100 to fix a score |
 | Esc | Close the scoreboard or menu |
 
-The dots across the top jump to any question.
+Scores save in your browser as you play, so a refresh won't lose the game. **Menu, New game** clears it.
 
 ## Editing questions
 
-All questions live in `questions.js`, in order of play. Each has four options and an `answer` from 0 (A) to 3 (D). Visual questions carry an inline SVG; the video question links out to the clip, since Zoom shares a separate tab more reliably than an embedded player.
+All questions live in `bank.js`, grouped by category. Each question has a level from 1 (easy) to 4 (hardest), the right answer in `a`, and three wrong answers in `w`. The game shuffles answer order every time, so you never set letters by hand. The board fills rows from easy to hard, so each category needs questions at every level.
 
-For a quick change during class, use **Menu, Edit questions**. Those edits save in that browser only.
-
-## Sources the questions draw on
-
-Jakob Nielsen and Nielsen Norman Group; Don Norman, *The Design of Everyday Things*; Government Digital Service, *Government Design Principles*; Sara Wachter-Boettcher, *Content Everywhere*; IDEO.org Design Kit; Michael J. Metts and Andy Welfle, *Writing Is Designing*; Joe Macleod, *Ends*; 18F Method Cards and UX Guide; G. Lynn Shostack on service blueprints; Jenny L. Davis, *How Artifacts Afford*; Golden Krishna, *The Best Interface Is No Interface*; Alexandra Schmidt, *Deliberate Intervention*; Harry Brignull, deceptive.design; Simon Wardley; Kevin Lynch, *The Image of the City*; Vox, "It's not you. Bad doors are everywhere."
+`ANSWER_KEY.md` lists every question in the bank with its answer, for reviewing or printing ahead of time.
