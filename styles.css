@@ -523,3 +523,96 @@ button { cursor: pointer; }
 @keyframes glowpink { from { box-shadow: 0 0 0 rgba(228,107,184,0); } to { box-shadow: 0 0 24px rgba(228,107,184,0.6); } }
 .autoback { display: inline-flex; align-items: center; gap: 10px; margin-left: 8px; color: var(--ink-dim); font-weight: 600; }
 .autoback .btn { padding: 6px 12px; }
+
+/* ---------- Watching on a phone ----------
+   The host runs the game on a computer. These rules keep every host screen readable
+   for anyone who opens it on a phone to follow along. */
+@media (max-width: 760px) {
+  .app { gap: 10px; padding-block: 10px; grid-template-rows: auto; align-content: start; }
+  .topbar { gap: 4px 12px; min-height: 0; }
+  .brand { font-size: 22px; }
+  .qmeta { font-size: 16px; }
+  .joinhint { flex-basis: 100%; order: 5; font-size: 13px; white-space: normal; }
+  .chip { font-size: 13px; padding: 4px 10px; }
+  .timer { width: 52px; height: 52px; }
+  .timer span { font-size: 24px; }
+
+  /* board: shrink everything so all categories fit side by side */
+  .board { gap: 4px; overflow-x: visible; }
+  .cat-head {
+    min-height: 58px; padding: 4px 2px; border-radius: 6px;
+    font-size: clamp(9px, 2.5vw, 12px); letter-spacing: 0; line-height: 1.05;
+    overflow-wrap: normal; word-break: normal; -webkit-hyphens: manual; hyphens: manual; overflow: hidden;
+  }
+  .cell { min-height: 42px; border-radius: 6px; font-size: clamp(16px, 5.4vw, 24px); text-shadow: 0 2px 0 #000a; }
+  .board-foot { gap: 8px; }
+  .picker { font-size: 14px; }
+  .special-due { font-size: 15px; padding: 6px 8px 6px 12px; gap: 8px; width: 100%; justify-content: space-between; }
+
+  /* team cards: a compact grid instead of a tall stack */
+  .teams { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+  .team { padding: 6px 8px; gap: 4px; border-radius: 8px; }
+  .team-head { flex-direction: column; align-items: flex-start; gap: 0; }
+  .team-name { font-size: 13px; }
+  .team-score { font-size: 22px; }
+  .status { min-height: 26px; font-size: 12px; }
+  .picks button { font-size: 15px; padding: 2px 0; }
+  .extras button { font-size: 11px; }
+  .reveal-row { grid-template-columns: auto 1fr; gap: 4px; }
+  .pickchip { width: 26px; height: 26px; font-size: 16px; }
+  .delta { font-size: 16px; }
+  .notes { font-size: 11px; }
+
+  /* host buttons wrap into a tidy block */
+  .hostbar { gap: 6px; }
+  .hostbar .btn { padding: 7px 10px; font-size: 14px; }
+  .hostbar .btn kbd { display: none; }
+  .autoback { margin-left: 0; font-size: 13px; }
+  .inline { font-size: 13px; }
+
+  /* questions */
+  .stage { gap: 10px; }
+  .prompt, .media-stage .prompt { font-size: clamp(19px, 5.4vw, 24px); max-width: none; }
+  .category { font-size: 14px; }
+  .options { gap: 6px; }
+  .opt, .media-stage .opt { --edge: 12px; min-height: 44px; padding: 6px calc(var(--edge) + 8px); gap: 8px; }
+  .opt .letter { font-size: 22px; }
+  .opt .text, .media-stage .opt .text { font-size: 15px; }
+  .options-wait { min-height: 70px; font-size: 15px; text-align: center; padding: 8px; }
+  .explain, .side .explain { font-size: 14px; padding: 8px 10px; }
+  .media svg, .media-stage .media svg { max-height: 34vh; }
+  .splash h2 { font-size: clamp(54px, 18vw, 90px); }
+  .splash p { font-size: 16px; }
+
+  /* Special rollers */
+  .rollboard { height: auto; aspect-ratio: 1 / 1; gap: 4px; }
+  .rcell { font-size: clamp(11px, 3.6vw, 16px); border-radius: 6px; border-width: 1px; }
+  .rcell.nos { font-size: 9px; }
+  .roll-center { padding: 6px; gap: 2px; border-radius: 8px; }
+  .roll-title { font-size: clamp(24px, 8vw, 40px); }
+  .roll-team { font-size: 16px; }
+  .roll-hint { font-size: 12px; }
+  .roll-amount { font-size: clamp(40px, 13vw, 64px); }
+  .wheel-wrap { gap: 10px; }
+  .wheel-wrap .roll-center { min-height: 0; padding: 10px; }
+  .wheel, .plinko { max-height: 52vh; margin-inline: auto; }
+
+  /* lobby, standings, overlays */
+  .join-label { font-size: 15px; }
+  .join-url { font-size: 22px; }
+  .join-code { font-size: clamp(64px, 22vw, 110px); }
+  .lobby-team { font-size: 15px; padding: 8px 10px; }
+  .results h2, .overlay h2 { font-size: 28px; }
+  .standing, .standing.four { grid-template-columns: 1.6em minmax(0, 1fr) auto; gap: 6px 10px; }
+  .standing.four .gain { grid-column: 2; grid-row: 2; font-size: 13px; }
+  .standing .pts { font-size: 26px; }
+  .standing .rank { font-size: 22px; }
+  .bar-name { font-size: 16px; }
+  .standing .adj { grid-column: 2 / -1; }
+  .cel-title { font-size: clamp(28px, 9vw, 44px); }
+  .winner h2 { font-size: clamp(44px, 14vw, 72px); }
+
+  /* setup */
+  .setup h1 { font-size: clamp(48px, 15vw, 72px); }
+  .field { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}

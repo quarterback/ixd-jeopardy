@@ -1186,8 +1186,21 @@
     app.innerHTML = body + viewOverlay() + viewCelebration();
     paintClock();
     drawQR();
+    fitHeads();
     ensureRolling();
   }
+
+  // On narrow screens, shrink a category name until its longest word fits the column.
+  function fitHeads() {
+    app.querySelectorAll(".cat-head").forEach(el => {
+      el.style.fontSize = "";
+      let size = parseFloat(getComputedStyle(el).fontSize);
+      while (size > 7 && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)) {
+        size -= 0.5; el.style.fontSize = size + "px";
+      }
+    });
+  }
+  addEventListener("resize", () => { if (S && S.view === "board") fitHeads(); });
 
   // ---------- events ----------
   function act(fn) { fn(); persist(); publish(); render(); }
