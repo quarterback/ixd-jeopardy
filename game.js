@@ -289,26 +289,32 @@
       </div></section>`;
     }
     const whoPicked = i => S.teams.map((tm, t) => r.picks[t] === i ? `<i>${esc(tm.name)}</i>` : "").join("");
-    return `
-    <section class="stage ${r.revealed ? "revealed" : ""}">
-      <div class="question-row ${q.media ? "has-media" : ""}">
-        ${viewMedia(q.media)}
-        <div class="qtext">
-          ${cell.dd || cell.final ? `<p class="category">${esc(q.cat)}</p>` : ""}
-          <h1 class="prompt">${esc(q.q)}</h1>
-          ${viewClip(q.media)}
-          ${q.media && r.revealed ? viewExplain(q) : ""}
-        </div>
-      </div>
-      ${r.opts ? `<div class="options">
+    const options = r.opts ? `<div class="options">
         ${q.options.map((o, i) => {
           const cls = ["opt"];
           if (r.revealed && i === q.answer) cls.push("right");
           if (r.revealed && i !== q.answer && Object.values(r.picks).includes(i)) cls.push("wrong-picked");
           return `<div class="${cls.join(" ")}"><span class="letter">${LETTERS[i]}</span><span class="text">${esc(o)}${r.revealed ? `<span class="who">${whoPicked(i)}</span>` : ""}</span></div>`;
         }).join("")}
-      </div>` : `<div class="options-wait">Answers appear when the clock starts.</div>`}
-      ${r.revealed && !q.media ? viewExplain(q) : `<div></div>`}
+      </div>` : `<div class="options-wait">Answers appear when the clock starts.</div>`;
+    const heading = `${cell.dd || cell.final ? `<p class="category">${esc(q.cat)}</p>` : ""}<h1 class="prompt">${esc(q.q)}</h1>`;
+    if (q.media) {
+      // Visual question: picture on the left, question, answers and explanation on the right.
+      return `
+    <section class="stage media-stage ${r.revealed ? "revealed" : ""}">
+      ${viewMedia(q.media)}
+      <div class="side">
+        <div class="qtext">${heading}${viewClip(q.media)}</div>
+        ${options}
+        ${r.revealed ? viewExplain(q) : ""}
+      </div>
+    </section>`;
+    }
+    return `
+    <section class="stage ${r.revealed ? "revealed" : ""}">
+      <div class="qtext">${heading}</div>
+      ${options}
+      ${r.revealed ? viewExplain(q) : `<div></div>`}
     </section>`;
   }
 

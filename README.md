@@ -4,7 +4,7 @@ A quiz board for reviewing interaction design live over Zoom. The host shares th
 
 ## Deploying
 
-There is no build step. The site is four files: `index.html`, `styles.css`, `bank.js` and `game.js`. On Netlify or Vercel, point a new site at this repo with no build command and the root folder as the publish directory. You can also open `index.html` straight from your computer.
+There is no build step. The site is five plain files: `index.html`, `styles.css`, `visuals.js`, `bank.js` and `game.js`. On Netlify or Vercel, point a new site at this repo with no build command and the root folder as the publish directory. You can also open `index.html` straight from your computer.
 
 ## Before class
 
@@ -42,5 +42,7 @@ Scores save in your browser as you play, so a refresh won't lose the game. **Men
 ## Editing questions
 
 All questions live in `bank.js`, grouped by category. Each question has a level from 1 (easy) to 4 (hardest), the right answer in `a`, and three wrong answers in `w`. The game shuffles answer order every time, so you never set letters by hand. The board fills rows from easy to hard, so each category needs questions at every level.
+
+To show a picture with a question, add `media: { type: "svg", svg: SVG_NAME }`. The drawings live in `visuals.js`; `phone()` and `browser()` wrap a screen in a device frame so a new one only needs the screen contents. Visual questions show the picture on the left with the question and answers on the right.
 
 `ANSWER_KEY.md` lists every question in the bank with its answer, for reviewing or printing ahead of time.

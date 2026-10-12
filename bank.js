@@ -1,132 +1,4 @@
-/* Design Jeopardy question bank. Drawings first, then the bank, Daily Doubles and finals. */
-
-const SVG_CONFIRMSHAME = `
-<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A website pop up offering a discount code">
-  <rect width="480" height="320" fill="#2b2f3a"/>
-  <rect x="20" y="18" width="440" height="22" rx="4" fill="#3a3f4c"/>
-  <rect x="20" y="52" width="210" height="110" rx="6" fill="#3a3f4c"/>
-  <rect x="250" y="52" width="210" height="110" rx="6" fill="#3a3f4c"/>
-  <rect width="480" height="320" fill="#000" opacity="0.45"/>
-  <rect x="80" y="40" width="320" height="250" rx="14" fill="#fbfbfd"/>
-  <text x="240" y="88" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#1d1f27">Get 15% off</text>
-  <text x="240" y="114" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#4a4f5c">your first order when you join our list</text>
-  <rect x="110" y="134" width="260" height="38" rx="8" fill="#fff" stroke="#c8cbd4"/>
-  <text x="124" y="158" font-family="Arial, sans-serif" font-size="13" fill="#9a9eaa">you@email.com</text>
-  <rect x="110" y="184" width="260" height="42" rx="8" fill="#e2483d"/>
-  <text x="240" y="211" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#fff">Yes, send my code</text>
-  <text x="240" y="256" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#4a4f5c" text-decoration="underline">No thanks, I like paying full price</text>
-</svg>`;
-
-const SVG_DOOR = `
-<svg viewBox="0 0 320 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A glass door with a flat metal plate and a taped sign">
-  <rect width="320" height="360" fill="#2b2f3a"/>
-  <rect x="0" y="330" width="320" height="30" fill="#3a3f4c"/>
-  <rect x="60" y="30" width="200" height="300" fill="#6b5a45"/>
-  <rect x="74" y="44" width="172" height="286" fill="#9fc2d6" opacity="0.55"/>
-  <rect x="74" y="44" width="172" height="286" fill="none" stroke="#5a4a38" stroke-width="4"/>
-  <rect x="196" y="160" width="36" height="70" rx="3" fill="#c9ccd3" stroke="#8d919b" stroke-width="2"/>
-  <rect x="110" y="96" width="100" height="44" fill="#fffef6" transform="rotate(-4 160 118)"/>
-  <rect x="104" y="92" width="18" height="10" fill="#e8d98a" opacity="0.8" transform="rotate(-30 113 97)"/>
-  <rect x="198" y="88" width="18" height="10" fill="#e8d98a" opacity="0.8" transform="rotate(25 207 93)"/>
-  <text x="160" y="127" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="26" font-weight="900" fill="#c23a2c" transform="rotate(-4 160 118)">PULL</text>
-</svg>`;
-
-const SVG_FAREGATE = `
-<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A transit fare gate with a reader that accepts only a phone">
-  <rect width="480" height="320" fill="#2b2f3a"/>
-  <rect x="0" y="270" width="480" height="50" fill="#3a3f4c"/>
-  <rect x="110" y="110" width="70" height="160" rx="8" fill="#8d939f"/>
-  <rect x="300" y="110" width="70" height="160" rx="8" fill="#8d939f"/>
-  <path d="M180 170 h55 a10 10 0 0 1 0 20 h-55 z" fill="#d94f43"/>
-  <path d="M300 170 h-55 a10 10 0 0 0 0 20 h55 z" fill="#d94f43"/>
-  <rect x="116" y="58" width="58" height="72" rx="6" fill="#1d1f27" stroke="#5c6270" stroke-width="2"/>
-  <rect x="135" y="68" width="20" height="34" rx="4" fill="none" stroke="#7fd1a8" stroke-width="3"/>
-  <circle cx="145" cy="96" r="2" fill="#7fd1a8"/>
-  <path d="M160 74 q8 10 0 20 M165 70 q12 14 0 28" fill="none" stroke="#7fd1a8" stroke-width="2"/>
-  <text x="145" y="122" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#e8eaf0">TAP PHONE</text>
-  <rect x="190" y="26" width="100" height="30" rx="4" fill="#1d1f27"/>
-  <text x="240" y="46" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#f2c94c">ENTRY</text>
-  <text x="240" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#c9ccd3">No card slot. No coin slot. No staffed booth.</text>
-</svg>`;
-
-const SVG_LYNCH = `
-<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A hand drawn mental map of a city with one element highlighted">
-  <rect width="480" height="320" fill="#f3f1ea"/>
-  <path d="M30 230 L130 205 L200 170 L260 160 L330 120 L460 90" fill="none" stroke="#8a8f99" stroke-width="5" stroke-linecap="round"/>
-  <path d="M90 40 L120 120 L160 200 L190 300" fill="none" stroke="#8a8f99" stroke-width="5" stroke-linecap="round"/>
-  <path d="M250 30 L265 160 L275 300" fill="none" stroke="#8a8f99" stroke-width="5" stroke-linecap="round"/>
-  <path d="M330 120 L400 300" fill="none" stroke="#8a8f99" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 6"/>
-  <ellipse cx="380" cy="200" rx="70" ry="45" fill="#c9b6d9" opacity="0.6"/>
-  <path d="M0 278 C 90 250, 160 300, 250 268 S 400 240, 480 262" fill="none" stroke="#5c9ccf" stroke-width="26"/>
-  <path d="M0 278 C 90 250, 160 300, 250 268 S 400 240, 480 262" fill="none" stroke="#e0a400" stroke-width="40" opacity="0.28"/>
-  <circle cx="200" cy="170" r="16" fill="#f3f1ea" stroke="#3d4250" stroke-width="3"/>
-  <rect x="300" y="40" width="16" height="56" fill="#3d4250"/>
-  <path d="M296 40 L308 18 L320 40 z" fill="#3d4250"/>
-  <g font-family="Georgia, serif" font-size="14" fill="#3d4250" font-style="italic">
-    <text x="335" y="60">the clock tower</text>
-    <text x="224" y="196">the square</text>
-    <text x="350" y="204">old mill blocks</text>
-    <text x="40" y="196">Main St.</text>
-  </g>
-  <g font-family="Arial Black, Arial, sans-serif" font-size="30" fill="#b07a00">
-    <text x="214" y="246">?</text>
-  </g>
-</svg>`;
-
-
-const SVG_HOMEPAGE = `
-<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A city aquatics home page with seven buttons of equal size">
-  <rect width="480" height="320" fill="#f4f6f9"/>
-  <rect width="480" height="44" fill="#1f4e79"/>
-  <text x="20" y="28" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#fff">Riverton Aquatics</text>
-  <text x="20" y="74" font-family="Arial, sans-serif" font-size="13" fill="#3a3f4c">Welcome to Riverton Aquatics. Please choose an option below.</text>
-  <g font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#1f4e79" text-anchor="middle">
-    <rect x="20" y="92" width="140" height="56" rx="6" fill="#dbe6f2"/><text x="90" y="125">Facility Information</text>
-    <rect x="170" y="92" width="140" height="56" rx="6" fill="#dbe6f2"/><text x="240" y="125">Programs &amp; Activities</text>
-    <rect x="320" y="92" width="140" height="56" rx="6" fill="#dbe6f2"/><text x="390" y="125">Forms &amp; Policies</text>
-    <rect x="20" y="158" width="140" height="56" rx="6" fill="#dbe6f2"/><text x="90" y="191">Get Started</text>
-    <rect x="170" y="158" width="140" height="56" rx="6" fill="#dbe6f2"/><text x="240" y="191">Enrollment Admin</text>
-    <rect x="320" y="158" width="140" height="56" rx="6" fill="#dbe6f2"/><text x="390" y="191">Contact Us</text>
-    <rect x="170" y="224" width="140" height="56" rx="6" fill="#dbe6f2"/><text x="240" y="257">News &amp; Updates</text>
-  </g>
-  <text x="240" y="306" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">Lap swim times, lesson signup and pool closures are all somewhere in here.</text>
-</svg>`;
-
-const SVG_DUPLICATE = `
-<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A phone screen showing a message about an existing streetlight report">
-  <rect width="480" height="320" fill="#2b2f3a"/>
-  <rect x="150" y="10" width="180" height="300" rx="22" fill="#111318"/>
-  <rect x="160" y="22" width="160" height="276" rx="14" fill="#fbfbfd"/>
-  <text x="174" y="48" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#1d1f27">Report a streetlight</text>
-  <rect x="172" y="58" width="136" height="70" rx="6" fill="#dfe6ee"/>
-  <circle cx="240" cy="90" r="7" fill="#d94f43"/>
-  <rect x="172" y="138" width="136" height="98" rx="8" fill="#fff4d6" stroke="#e0b44a"/>
-  <g font-family="Arial, sans-serif" font-size="10" fill="#3a3f4c">
-    <text x="180" y="156" font-weight="700">Already reported</text>
-    <text x="180" y="172">A light at this spot was</text>
-    <text x="180" y="185">reported 2 hours ago.</text>
-    <text x="180" y="201">Ticket 8841 · Scheduled</text>
-  </g>
-  <rect x="180" y="210" width="120" height="20" rx="10" fill="#1f4e79"/>
-  <text x="240" y="224" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#fff">Follow this report</text>
-  <text x="240" y="262" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#1f4e79" text-decoration="underline">Report a different light</text>
-</svg>`;
-
-const SVG_CLOSEX = `
-<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A large ad covering a phone screen with a tiny close button in the far corner">
-  <rect width="480" height="320" fill="#2b2f3a"/>
-  <rect x="150" y="10" width="180" height="300" rx="22" fill="#111318"/>
-  <rect x="160" y="22" width="160" height="276" rx="14" fill="#cfd5de"/>
-  <rect x="168" y="40" width="144" height="240" rx="8" fill="#ffd23f"/>
-  <text x="240" y="120" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="22" fill="#1d1f27">SUMMER</text>
-  <text x="240" y="146" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="22" fill="#1d1f27">SALE</text>
-  <rect x="190" y="200" width="100" height="44" rx="22" fill="#1d1f27"/>
-  <text x="240" y="227" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#ffd23f">SHOP NOW</text>
-  <text x="305" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#8a7a3a">×</text>
-  <circle cx="305" cy="47" r="12" fill="none" stroke="#e0544a" stroke-width="2" stroke-dasharray="3 3"/>
-  <circle cx="200" cy="300" r="10" fill="#e8c4a8" opacity="0.9"/>
-  <text x="150" y="304" text-anchor="end" font-family="Arial, sans-serif" font-size="11" fill="#c9ccd3">your thumb</text>
-</svg>`;
+/* Design Jeopardy question bank. Drawings live in visuals.js, which loads first. */
 
 /*
   THE BANK
@@ -149,6 +21,8 @@ const BANK = [
   {
     cat: "UX Laws",
     qs: [
+      { l: 2, q: "Shoppers on this store keep saying they can't find their bag. Which law explains why?", a: "Jakob's law", w: ["Hick's law", "Miller's law", "Goodhart's law"], why: "People expect the cart or bag in the top right because nearly every other store puts it there.", src: "Jakob Nielsen", media: { type: "svg", svg: SVG_JAKOB } },
+      { l: 2, q: "A burrito app asks you to pick toppings from this screen. Which law explains why people take so long?", a: "Hick's law", w: ["Fitts's law", "Postel's law", "Tesler's law"], why: "Thirty equal choices slow every decision. Group them, set smart defaults, or show the popular ones first.", src: "William Hick and Ray Hyman", media: { type: "svg", svg: SVG_HICK } },
       { l: 1, q: "Big buttons placed close to your thumb are faster to hit than small ones far away. Which law describes this?", a: "Fitts's law", w: ["Hick's law", "Jakob's law", "Miller's law"], why: "The time to reach a target depends on its distance and its size. Make important targets big and close.", src: "Paul Fitts, 1954" },
       { l: 1, q: "A menu with 40 choices takes longer to decide on than a menu with 5. Which law describes this?", a: "Hick's law", w: ["Fitts's law", "Tesler's law", "Postel's law"], why: "Decision time grows as the number and complexity of choices grows.", src: "William Hick and Ray Hyman" },
       { l: 2, q: "People expect your site to work like the other sites they already use. Which law is that?", a: "Jakob's law", w: ["Conway's law", "Parkinson's law", "Goodhart's law"], why: "People spend most of their time on other sites, so familiar patterns save them from relearning.", src: "Jakob Nielsen" },
@@ -163,12 +37,12 @@ const BANK = [
   {
     cat: "Gestalt",
     qs: [
-      { l: 1, q: "A label sits right next to its input field so you know they go together. Which principle is at work?", a: "Proximity", w: ["Closure", "Symmetry", "Continuity"], why: "Things that are close together are read as a group." },
+      { l: 1, q: "Is the Password label for the first box or the second? Which principle is this form getting wrong?", a: "Proximity", w: ["Closure", "Symmetry", "Continuity"], why: "Things that are close together are read as a group.", media: { type: "svg", svg: SVG_PROXIMITY } },
       { l: 1, q: "Every link on a page is blue and underlined, so you read them all as the same kind of thing. Which principle?", a: "Similarity", w: ["Proximity", "Figure and ground", "Closure"], why: "Things that look alike are read as belonging together." },
-      { l: 2, q: "A card with a border makes the image, title and price inside it feel like one unit. Which principle?", a: "Common region", w: ["Similarity", "Continuity", "Symmetry"], why: "Elements inside a shared boundary are read as a group." },
-      { l: 2, q: "You see a full circle even though the logo only draws three quarters of it. Which principle?", a: "Closure", w: ["Proximity", "Common region", "Similarity"], why: "People fill in gaps to see a complete shape." },
+      { l: 2, q: "In this food delivery app, what makes each photo, name and rating read as one restaurant?", a: "Common region", w: ["Similarity", "Continuity", "Symmetry"], why: "Elements inside a shared boundary are read as a group.", media: { type: "svg", svg: SVG_CARDS } },
+      { l: 2, q: "Nobody drew a complete circle here, but you see two. Which principle?", a: "Closure", w: ["Proximity", "Common region", "Similarity"], why: "People fill in gaps to see a complete shape.", media: { type: "svg", svg: SVG_CLOSURE } },
       { l: 3, q: "A modal dims everything behind it so the dialog stands out. Which principle is the dimming using?", a: "Figure and ground", w: ["Closure", "Continuity", "Proximity"], why: "People separate a focal figure from its background. Dimming pushes the page back into ground." },
-      { l: 3, q: "Steps in a progress tracker are joined by a line, so you read them as one sequence. Which principle?", a: "Uniform connectedness", w: ["Closure", "Similarity", "Symmetry"], why: "Elements that are visually connected are read as more related than ones that aren't." },
+      { l: 3, q: "The line joining these delivery steps makes you read them as one sequence. Which principle?", a: "Uniform connectedness", w: ["Closure", "Similarity", "Symmetry"], why: "Elements that are visually connected are read as more related than ones that aren't.", media: { type: "svg", svg: SVG_TRACKER } },
       { l: 4, q: "People see a complex shape as the simplest form that could explain it. What is that principle called?", a: "Prägnanz", w: ["Isomorphism", "Emergence", "Reification"], why: "Prägnanz, or the law of simplicity: we read things in the simplest way we can." },
       { l: 4, q: "Gestalt principles come from which field?", a: "Psychology", w: ["Typography", "Architecture", "Computer science"], why: "Gestalt psychologists in early 1900s Germany studied how people perceive wholes." }
     ]
@@ -177,10 +51,10 @@ const BANK = [
     cat: "How People Think",
     qs: [
       { l: 1, q: "People believe a beautiful interface is easier to use, even when it isn't. What is this called?", a: "The aesthetic usability effect", w: ["The halo of choice", "The Zeigarnik effect", "The peak end rule"], why: "Good looks buy patience, but they can also hide real usability problems in testing." },
-      { l: 1, q: "A loyalty card that starts you with two free stamps makes you finish it faster. Which effect?", a: "The goal gradient effect", w: ["The serial position effect", "The anchoring effect", "The decoy effect"], why: "People speed up as they get closer to a goal, even an artificial head start." },
+      { l: 1, q: "A coffee shop hands you this card with two stamps already filled in. People finish it faster than a blank 8 stamp card. Which effect?", a: "The goal gradient effect", w: ["The serial position effect", "The anchoring effect", "The decoy effect"], why: "People speed up as they get closer to a goal, even an artificial head start.", media: { type: "svg", svg: SVG_STAMPCARD } },
       { l: 2, q: "People judge an experience mostly by its most intense moment and how it ended. What is this called?", a: "The peak end rule", w: ["The recency bias", "The halo effect", "The framing effect"], why: "That is why endings and recovery moments deserve design attention.", src: "Daniel Kahneman" },
       { l: 2, q: "In a list, people remember the first and last items best. What is this called?", a: "The serial position effect", w: ["The Von Restorff effect", "The peak end rule", "The mere exposure effect"], why: "Put the most important items at the start or end of navigation." },
-      { l: 3, q: "One red button among grey ones is the one people remember. Which effect?", a: "The Von Restorff effect", w: ["The serial position effect", "The decoy effect", "The bandwagon effect"], why: "Also called the isolation effect: the item that differs stands out." },
+      { l: 3, q: "Which effect makes the Plus plan the one people notice and remember on this page?", a: "The Von Restorff effect", w: ["The serial position effect", "The Zeigarnik effect", "The peak end rule"], why: "Also called the isolation effect: the item that differs stands out.", media: { type: "svg", svg: SVG_PRICING } },
       { l: 3, q: "A half finished profile with a progress bar nags at you until you complete it. Which effect?", a: "The Zeigarnik effect", w: ["The goal gradient effect", "The IKEA effect", "The peak end rule"], why: "People remember unfinished tasks better than finished ones." },
       { l: 3, q: "What do we call a person's internal picture of how a system works?", a: "A mental model", w: ["A persona", "A conceptual map", "A heuristic"], why: "Problems start when the system works differently from what people expect." },
       { l: 4, q: "Offering too many similar options can make people choose nothing at all. What is that called?", a: "Choice overload", w: ["Cognitive dissonance", "Loss aversion", "The decoy effect"], why: "The famous jam study found more people bought when fewer flavors were on display.", src: "Sheena Iyengar and Mark Lepper, 2000" },
@@ -190,11 +64,12 @@ const BANK = [
   {
     cat: "Affordances",
     qs: [
+      { l: 2, q: "People don't realize they can tap Edit profile on this screen. What is it missing?", a: "A signifier", w: ["A constraint", "A mental model", "A breadcrumb"], why: "It looks exactly like the plain text around it. Nothing says this is something you can press.", src: "Don Norman", media: { type: "svg", svg: SVG_NOSIGNIFIER } },
       { l: 1, q: "A door has a pull handle, but you're supposed to push it. What is that kind of door called?", a: "A Norman door", w: ["A Tesler door", "A Fitts door", "A dark pattern door"], why: "Its design signals the wrong action, so someone tapes up a sign.", src: "Named for Don Norman" },
       { l: 1, q: "A flat metal plate on a door tells you where to push. The plate is a...", a: "Signifier", w: ["Constraint", "Mapping", "Mental model"], why: "A signifier tells you where and how to act.", src: "Don Norman" },
       { l: 2, q: "What does an affordance describe?", a: "What actions an object makes possible for someone", w: ["How an object looks", "What an object costs to make", "How a brand feels"], why: "A chair affords sitting. The concept describes possible actions between a person and a thing." },
       { l: 2, q: "A button changes color and makes a click sound when you press it. That is...", a: "Feedback", w: ["A constraint", "A signifier", "Mapping"], why: "Feedback tells you the system received your action and what happened." },
-      { l: 3, q: "Stove knobs laid out in the same pattern as the burners are an example of good...", a: "Mapping", w: ["Feedback", "Affordance", "Closure"], why: "Mapping is the relationship between controls and what they control." },
+      { l: 3, q: "Which knob turns on the back right burner? Nobody can tell. This stove has poor...", a: "Mapping", w: ["Feedback", "Affordance", "Closure"], why: "Mapping is the relationship between controls and what they control.", media: { type: "svg", svg: SVG_STOVE } },
       { l: 3, q: "A SIM card tray only fits one way, so you can't put it in wrong. That is a...", a: "Constraint", w: ["Signifier", "Mapping", "Feedback"], why: "Constraints limit the possible actions so errors can't happen." },
       { l: 4, q: "\"Did that do what I wanted?\" is a question about which gulf?", a: "The gulf of evaluation", w: ["The gulf of execution", "The gulf of expectation", "The gulf of experience"], why: "Execution is figuring out how to act. Evaluation is figuring out what happened.", src: "Don Norman" },
       { l: 4, q: "Who coined the word affordance, before designers borrowed it?", a: "James J. Gibson, a psychologist", w: ["Don Norman, a designer", "Jakob Nielsen, a usability researcher", "Kevin Lynch, an urban planner"], why: "Gibson used it in ecological psychology. Don Norman brought it into design in the late 1980s." },
@@ -203,10 +78,11 @@ const BANK = [
   {
     cat: "Usability",
     qs: [
-      { l: 1, q: "A progress bar shows your upload is 60 percent done. Which usability heuristic is it serving?", a: "Visibility of system status", w: ["Recognition rather than recall", "Help and documentation", "Aesthetic and minimalist design"], why: "Keep people informed about what is going on, with timely feedback.", src: "Jakob Nielsen's 10 usability heuristics" },
+      { l: 2, q: "Which usability heuristic does this sign up error fail?", a: "Help users recognize, diagnose and recover from errors", w: ["Aesthetic and minimalist design", "Flexibility and efficiency of use", "Consistency and standards"], why: "It says something failed but not what, why, or how to fix it. A code means nothing to a person.", src: "Jakob Nielsen's 10 usability heuristics", media: { type: "svg", svg: SVG_ERRCODE } },
+      { l: 1, q: "Which usability heuristic is this upload screen serving?", a: "Visibility of system status", w: ["Recognition rather than recall", "Help and documentation", "Aesthetic and minimalist design"], why: "Keep people informed about what is going on, with timely feedback.", src: "Jakob Nielsen's 10 usability heuristics", media: { type: "svg", svg: SVG_UPLOAD } },
       { l: 1, q: "Gmail lets you undo a sent email for a few seconds. Which heuristic?", a: "User control and freedom", w: ["Error prevention", "Consistency and standards", "Flexibility and efficiency of use"], why: "People make mistakes and need a clearly marked emergency exit.", src: "Jakob Nielsen's 10 usability heuristics" },
-      { l: 2, q: "A date picker greys out dates in the past so you can't choose them. Which heuristic?", a: "Error prevention", w: ["Visibility of system status", "User control and freedom", "Help and documentation"], why: "Stopping a mistake before it happens beats a good error message.", src: "Jakob Nielsen's 10 usability heuristics" },
-      { l: 2, q: "When you tap a search box, the app shows your last five searches. Which heuristic?", a: "Recognition rather than recall", w: ["Error prevention", "Match between system and the real world", "Consistency and standards"], why: "Let people pick from what they see instead of remembering it.", src: "Jakob Nielsen's 10 usability heuristics" },
+      { l: 2, q: "This date picker won't let you choose a day that has already passed. Which heuristic?", a: "Error prevention", w: ["Visibility of system status", "User control and freedom", "Help and documentation"], why: "Stopping a mistake before it happens beats a good error message.", src: "Jakob Nielsen's 10 usability heuristics", media: { type: "svg", svg: SVG_CALENDAR } },
+      { l: 2, q: "You tap the search box and the app shows this. Which heuristic?", a: "Recognition rather than recall", w: ["Error prevention", "Match between system and the real world", "Consistency and standards"], why: "Let people pick from what they see instead of remembering it.", src: "Jakob Nielsen's 10 usability heuristics", media: { type: "svg", svg: SVG_RECENT } },
       { l: 3, q: "A trash can icon for deleting files is an example of which heuristic?", a: "Match between system and the real world", w: ["Aesthetic and minimalist design", "Consistency and standards", "Recognition rather than recall"], why: "Use concepts and words people already know from the world." },
       { l: 3, q: "Keyboard shortcuts that experts use and beginners can ignore fit which heuristic?", a: "Flexibility and efficiency of use", w: ["User control and freedom", "Consistency and standards", "Help and documentation"], why: "Accelerators speed up experienced users without getting in the way of new ones." },
       { l: 3, q: "Testing with about five users finds roughly how much of a design's usability problems?", a: "About 85 percent", w: ["About a third", "About half", "All of them"], why: "Run several small rounds and fix things between them, instead of one big study.", src: "Jakob Nielsen, 2000" },
@@ -231,7 +107,8 @@ const BANK = [
   {
     cat: "Information Architecture",
     qs: [
-      { l: 1, q: "A trail like Home > Pools > Lap Swim at the top of a page is called...", a: "Breadcrumbs", w: ["A mega menu", "A sitemap", "Tabs"], why: "They show where you are and let you jump back up the hierarchy." },
+      { l: 3, q: "You need to pay a parking ticket on this city site. What is wrong with these menu labels?", a: "They have weak information scent", w: ["There are too many of them", "They aren't in alphabetical order", "They need icons"], why: "Solutions, Resources, Explore and More could hold anything, so nothing tells you where parking tickets live.", media: { type: "svg", svg: SVG_SCENT } },
+      { l: 1, q: "What is the trail of links at the top of this page called?", a: "Breadcrumbs", w: ["A mega menu", "A sitemap", "Tabs"], why: "They show where you are and let you jump back up the hierarchy.", media: { type: "svg", svg: SVG_BREADCRUMB } },
       { l: 1, q: "Which question does a content inventory answer?", a: "What is there?", w: ["Is it any good?", "Who reads it?", "What should we write next?"], why: "An inventory lists everything. An audit judges it." },
       { l: 2, q: "People sort topic cards into groups and name the groups themselves. What kind of card sort is that?", a: "An open card sort", w: ["A closed card sort", "A tree test", "A reverse card sort"], why: "Open sorts show how people think about the content. Closed sorts test categories you already made." },
       { l: 2, q: "In a content audit, ROT stands for...", a: "Redundant, outdated, trivial", w: ["Read, organize, test", "Remove, outline, tag", "Relevant, organized, timely"], why: "It is the standard filter for what to cut." },
@@ -247,7 +124,7 @@ const BANK = [
     qs: [
       { l: 1, q: "Which map answers \"What happens, step by step?\"", a: "A task flow", w: ["A journey map", "A mood board", "A sitemap"], why: "A task flow shows actions, decisions and system responses toward a goal." },
       { l: 1, q: "Which map answers \"What is the experience of it happening?\"", a: "A journey map", w: ["A task flow", "A wireframe", "A sitemap"], why: "Journey maps add context, emotion and friction across time and channels." },
-      { l: 2, q: "A simple layout that shows structure, placement and hierarchy, with no color or styling, is a...", a: "Wireframe", w: ["Mockup", "Style tile", "Mood board"], why: "Wireframes settle structure before anyone argues about colors." },
+      { l: 2, q: "Boxes with an X for images, grey bars for text, and no color. What is this?", a: "Wireframe", w: ["Mockup", "Style tile", "Mood board"], why: "Wireframes settle structure before anyone argues about colors.", media: { type: "svg", svg: SVG_WIREFRAME } },
       { l: 2, q: "Drawing a sequence of frames that shows a person, their setting and what happens around the screen is a...", a: "Storyboard", w: ["Wireframe", "Task flow", "Sitemap"], why: "Storyboards show hands, bodies, places and interruptions, not just floating phone screens." },
       { l: 3, q: "On a service blueprint, what does the line of visibility separate?", a: "What the customer sees from what happens out of sight", w: ["Digital steps from physical steps", "The happy path from errors", "Research from design"], why: "Above it is frontstage. Below it is backstage work that supports the customer." },
       { l: 3, q: "A person behind a curtain secretly plays the computer while someone tests a prototype. What is that called?", a: "A Wizard of Oz prototype", w: ["A paper prototype", "A smoke test", "A clickable prototype"], why: "It tests an idea before anyone builds the technology behind it." },
@@ -259,9 +136,10 @@ const BANK = [
   {
     cat: "Accessibility",
     qs: [
+      { l: 1, q: "What is the main accessibility problem on this sign in screen?", a: "The text is too faint against the background", w: ["The button is too round", "There is no logo", "The fields are in the wrong order"], why: "Low contrast text is hard for everyone to read and impossible for many people with low vision, or anyone outside in bright sun.", media: { type: "svg", svg: SVG_CONTRAST } },
       { l: 1, q: "What is alt text for?", a: "Describing an image for people who can't see it", w: ["Showing a tooltip on hover", "Naming the image file", "Improving image quality"], why: "Screen readers read it aloud. Decorative images get an empty alt so they're skipped." },
       { l: 1, q: "Software that reads the screen aloud for blind and low vision users is called a...", a: "Screen reader", w: ["Screen magnifier", "Voice assistant", "Text expander"], why: "VoiceOver and NVDA are common ones." },
-      { l: 2, q: "A form shows errors only by turning fields red. Who does that fail first?", a: "People who can't tell red from other colors", w: ["People on slow connections", "People using a mouse", "People with large screens"], why: "Never use color alone to carry meaning. Add text or an icon." },
+      { l: 2, q: "Two fields on this checkout form have a problem. Who does this design fail first?", a: "People who can't tell red from other colors", w: ["People on slow connections", "People using a mouse", "People with large screens"], why: "Never use color alone to carry meaning. Add text or an icon.", media: { type: "svg", svg: SVG_REDONLY } },
       { l: 2, q: "Curb cuts were made for wheelchairs but help strollers, carts and bikes too. What is that idea called?", a: "The curb cut effect", w: ["The ramp principle", "Universal access", "The spillover effect"], why: "Designing for people at the edges often makes things better for everyone.", src: "Angela Glover Blackwell, 2017" },
       { l: 3, q: "The four principles of web accessibility, POUR, stand for perceivable, operable, understandable and...", a: "Robust", w: ["Readable", "Responsive", "Reliable"], why: "Robust means content works across browsers and assistive technologies.", src: "WCAG" },
       { l: 3, q: "Someone can't use a mouse and moves through a page with the Tab key. What must every control show?", a: "A visible focus state", w: ["A hover state", "A tooltip", "An icon"], why: "Without a focus indicator, keyboard users can't tell where they are." },
@@ -272,12 +150,13 @@ const BANK = [
   {
     cat: "Deceptive Design",
     qs: [
+      { l: 3, q: "Look at the two choices on this cookie banner. Which pattern?", a: "Visual interference", w: ["Confirmshaming", "Nagging", "Trick wording"], why: "The option the company wants is big and bright. The other one is tiny and nearly invisible.", media: { type: "svg", svg: SVG_COOKIES } },
       { l: 1, q: "Signing up takes two taps. Canceling takes a phone call during business hours. Which pattern?", a: "Hard to cancel", w: ["Sneaking", "Nagging", "Fake scarcity"], why: "Easy in, hard out, on purpose." },
       { l: 1, q: "An app asks you to turn on notifications every single time you open it. Which pattern?", a: "Nagging", w: ["Confirmshaming", "Preselection", "Forced action"], why: "Repeated interruptions wear people down until they say yes." },
-      { l: 2, q: "Travel insurance is already checked when you reach checkout. Which pattern?", a: "Preselection", w: ["Sneaking", "Trick wording", "Visual interference"], why: "A default chosen for you nudges you toward what the company wants." },
-      { l: 2, q: "A countdown timer says the deal ends soon, but it resets every time you reload. Which pattern?", a: "Fake urgency", w: ["Fake scarcity", "Nagging", "Hidden costs"], why: "A made up time limit pressures you to decide now." },
+      { l: 2, q: "Look at what's already selected before you pay. Which pattern?", a: "Preselection", w: ["Sneaking", "Trick wording", "Visual interference"], why: "A default chosen for you nudges you toward what the company wants.", media: { type: "svg", svg: SVG_PRESELECT } },
+      { l: 2, q: "This ticket app's timer starts over every time you reload the page. Which pattern is the timer?", a: "Fake urgency", w: ["Fake scarcity", "Nagging", "Hidden costs"], why: "A made up time limit pressures you to decide now.", media: { type: "svg", svg: SVG_COUNTDOWN } },
       { l: 2, q: "\"No thanks, I don't like saving money\" on a decline button. Which pattern?", a: "Confirmshaming", w: ["Trick wording", "Nagging", "Visual interference"], why: "It uses guilt to steer your choice." },
-      { l: 3, q: "Service fees appear only on the last step of checkout. Which pattern?", a: "Hidden costs", w: ["Sneaking", "Comparison prevention", "Fake urgency"], why: "By the end you've invested time, so you're less likely to walk away." },
+      { l: 3, q: "These fees only show up on the last step of checkout. Which pattern?", a: "Hidden costs", w: ["Sneaking", "Comparison prevention", "Fake urgency"], why: "By the end you've invested time, so you're less likely to walk away.", media: { type: "svg", svg: SVG_FEES } },
       { l: 3, q: "\"Only 2 left in stock!\" when there are plenty. Which pattern?", a: "Fake scarcity", w: ["Fake urgency", "Fake social proof", "Nagging"], why: "A false sense of limited supply pushes people to buy." },
       { l: 4, q: "\"Uncheck this box if you would prefer not to stop receiving emails.\" Which pattern?", a: "Trick wording", w: ["Preselection", "Confirmshaming", "Obstruction"], why: "Confusing language makes people do the opposite of what they meant." },
       { l: 4, q: "Before \"deceptive patterns\", what were these commonly called?", a: "Dark patterns", w: ["Black hat UX", "Grey patterns", "Anti patterns"], why: "Harry Brignull coined dark patterns in 2010 and later moved to deceptive patterns.", src: "Harry Brignull" }
@@ -286,7 +165,7 @@ const BANK = [
   {
     cat: "Wayfinding & Cities",
     qs: [
-      { l: 1, q: "A dirt trail worn across a lawn where people actually walk, instead of the sidewalk, is called a...", a: "Desire path", w: ["Wayfinding line", "Shortcut node", "Edge path"], why: "It shows the route people want. Some campuses wait to see them before paving." },
+      { l: 1, q: "What is the dirt trail worn across this lawn called?", a: "Desire path", w: ["Wayfinding line", "Shortcut node", "Edge path"], why: "It shows the route people want. Some campuses wait to see them before paving.", media: { type: "svg", svg: SVG_DESIRE } },
       { l: 1, q: "A tall clock tower you can see from all over town and use to orient yourself is a...", a: "Landmark", w: ["Node", "Edge", "District"], why: "Landmarks are reference points you look at, not places you enter.", src: "Kevin Lynch" },
       { l: 2, q: "In a wayfinding study, the moments where someone has to choose which way to go are called...", a: "Decision points", w: ["Pain points", "Touchpoints", "Breakpoints"], why: "Signs matter most at decision points. Put them where the choice happens." },
       { l: 2, q: "A busy plaza where several streets meet and people gather is which of Lynch's elements?", a: "Node", w: ["Landmark", "Edge", "Path"], why: "Nodes are strategic spots you can enter, like junctions and squares.", src: "Kevin Lynch" },
@@ -300,9 +179,12 @@ const BANK = [
   {
     cat: "Screens & States",
     qs: [
-      { l: 1, q: "A small message pops up at the bottom saying \"Message archived. Undo.\" What is that component called in Material 3?", a: "Snackbar", w: ["Dialog", "Tooltip", "Banner"], why: "Snackbars give brief feedback and can hold a single action like Undo." },
-      { l: 1, q: "What is the screen called that a person sees when there's nothing there yet, like an empty inbox?", a: "An empty state", w: ["A splash screen", "A loading state", "An error state"], why: "A good one explains what will appear and how to add the first thing." },
-      { l: 2, q: "Grey boxes in the shape of the content appear while a page loads. What are they called?", a: "A skeleton screen", w: ["A spinner", "A placeholder image", "A wireframe"], why: "They make the wait feel shorter and show what's coming." },
+      { l: 3, q: "This transit app hides trip planning, fares and alerts behind the three line icon. What usually happens?", a: "People use those hidden features less", w: ["People find them faster", "Nothing changes", "The app loads faster so people use it more"], why: "Out of sight is out of mind. Hidden navigation lowers discoverability, especially for important features.", media: { type: "svg", svg: SVG_HAMBURGER } },
+      { l: 2, q: "What is the row of icons along the bottom of this app called?", a: "A bottom navigation bar", w: ["A toolbar", "A hamburger menu", "Breadcrumbs"], why: "It keeps three to five main destinations one tap away, right where your thumb is.", media: { type: "svg", svg: SVG_BOTTOMNAV } },
+      { l: 1, q: "The red number on this app icon is called a...", a: "Badge", w: ["Chip", "Toast", "Tooltip"], why: "Badges show a count or status. A 99+ that never clears teaches people to ignore it.", media: { type: "svg", svg: SVG_BADGE } },
+      { l: 1, q: "What is the dark bar at the bottom of this chat app called in Material 3?", a: "Snackbar", w: ["Dialog", "Tooltip", "Banner"], why: "Snackbars give brief feedback and can hold a single action like Undo.", media: { type: "svg", svg: SVG_SNACKBAR } },
+      { l: 1, q: "What do designers call this screen in a music app?", a: "An empty state", w: ["A splash screen", "A loading state", "An error state"], why: "A good one explains what will appear and how to add the first thing.", media: { type: "svg", svg: SVG_EMPTY } },
+      { l: 2, q: "A social feed shows this for a second while it loads. What are these grey shapes called?", a: "A skeleton screen", w: ["A spinner", "A placeholder image", "A wireframe"], why: "They make the wait feel shorter and show what's coming.", media: { type: "svg", svg: SVG_SKELETON } },
       { l: 2, q: "A form tells you your password is too short while you're still typing. What is that called?", a: "Inline validation", w: ["Progressive disclosure", "Form autofill", "Input masking"], why: "Catching problems as people go beats a wall of errors after they hit submit." },
       { l: 2, q: "Material 3's round button that floats above the content for a screen's main action is the...", a: "Floating action button", w: ["Chip", "Segmented button", "Icon button"], why: "Called the FAB. One per screen, for the most important action." },
       { l: 3, q: "A reusable set of components, styles and rules that a team shares is called a...", a: "Design system", w: ["Mood board", "Style tile", "Wireframe kit"], why: "Material 3 is Google's. It keeps screens built by different people consistent." },
@@ -314,6 +196,7 @@ const BANK = [
   {
     cat: "Words on Screen",
     qs: [
+      { l: 3, q: "What is the biggest writing problem in this dialog?", a: "The buttons don't say what they do", w: ["It doesn't use the person's name", "The title is too short", "It should be in all caps"], why: "Cancel what? OK to what? Labels like Keep draft and Delete draft make the choice obvious, especially with a double negative in the title.", media: { type: "svg", svg: SVG_DIALOG } },
       { l: 1, q: "A product's consistent personality is its voice. How that personality adjusts to the situation is its...", a: "Tone", w: ["Brand", "Style", "Diction"], why: "A playful app should get plain and calm on the screen where your card was declined." },
       { l: 1, q: "The small bits of text on buttons, labels, hints and errors are often called...", a: "Microcopy", w: ["Body copy", "Metadata", "Alt text"], why: "Small words, big effect. Most interface confusion starts with a label." },
       { l: 2, q: "Which is the better button label for submitting a benefits application?", a: "Submit application", w: ["Submit", "OK", "Continue"], why: "Say what will happen. A specific verb and object beats a generic word." },
