@@ -471,14 +471,17 @@ button { cursor: pointer; }
 @media (max-height: 780px) { .rollboard { height: min(58vh, 460px); } }
 
 /* ---------- wheel and Plinko Specials ---------- */
-.wheel-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 28px; align-items: center; width: min(100%, 1100px); }
+.wheel-wrap { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 28px; align-items: center; width: min(100%, 1100px); }
 .wheel-wrap .roll-center { grid-row: auto; grid-column: auto; min-height: 260px; }
 .wheel, .plinko { width: 100%; height: auto; max-height: 62vh; display: block; }
+.wheel { max-height: 64vh; }
 .wheel { cursor: pointer; }
-.wheelspin { transform-box: fill-box; transform-origin: center; }
+.wheel-tilt { perspective: 1400px; }
+.wheel-tilt .wheel { transform: rotateX(14deg); transform-origin: 50% 100%; }
+.flapper { transform-box: fill-box; transform-origin: 50% 0%; }
 .bulb { fill: #fff3c4; animation: bulb 0.7s steps(1) infinite; }
 @keyframes bulb { 50% { fill: #5a4100; } }
-.wedge.landed path { stroke: #fff; stroke-width: 6; }
+.wedge.landed path { stroke: #fff; stroke-width: 7; filter: drop-shadow(0 0 10px #fff3c4); }
 .pslot rect { fill: #16246a; stroke: #2e3f99; stroke-width: 2; }
 .pslot text { fill: #eef1ff; }
 .pslot.top rect { fill: #5a4100; stroke: #f2b632; }

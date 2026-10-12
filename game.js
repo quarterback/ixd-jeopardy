@@ -15,7 +15,7 @@
   // The wheel: 24 wedges, one top wedge (index 15). Every wedge pays something.
   const WHEEL_BASE = [300, 500, 250, 700, 400, 850, 350, 600, 200, 800, 450, 500, 300, 650, 250, 1000, 400, 550, 150, 750, 350, 600, 250, 900];
   const WHEEL_TOP = 15;
-  const WHEEL_COLORS = ["#e0544a", "#2f7de1", "#f2b632", "#2fbf71", "#a77bf0", "#f08a4b", "#1fb5c4", "#e05aa0"];
+  const WHEEL_COLORS = ["#d7263d", "#f6c21c", "#1f6fd1", "#f07f1f", "#7b3fbf", "#1fa34a", "#e84a8a", "#13a6b8"];
   // Plinko: 9 slots mirrored from the middle. The middle pays most; the slots beside it pay least.
   const PLINKO_BASE = [200, 300, 500, 100, 1000, 100, 500, 300, 200];
   const PLINKO_AIMS = [0, 2, 4, 6, 8]; // which slot each of the five drop spots sits above
@@ -320,21 +320,40 @@
     if (center) center.innerHTML = `<p class="roll-title">Playing for</p><p class="roll-amount">${fmt(value)}</p>`;
     setTimeout(() => { r.rolled = true; r.shown = true; roll = null; persist(); publish(); render(); }, 1600);
   }
+  // Spins with an ease out, ticking the flapper every time a peg passes it.
   function spinWheel() {
-    const w = Math.floor(Math.random() * WHEEL_BASE.length);
-    const jitter = Math.random() * 9 - 4.5;
-    const turns = 5 + Math.floor(Math.random() * 2);
-    const target = turns * 360 - w * 15 + jitter;
-    const el = document.getElementById("wheelspin");
-    if (el) {
-      el.style.transition = "transform 5.6s cubic-bezier(0.12, 0.62, 0.08, 1)";
-      requestAnimationFrame(() => { el.style.transform = `rotate(${target}deg)`; });
-    }
-    setTimeout(() => {
-      const wedge = document.querySelector(`.wedge[data-i="${w}"]`);
-      if (wedge) wedge.classList.add("landed");
-      land(WHEEL_BASE[w] * mult());
-    }, el ? 5800 : 0);
+    const n = WHEEL_BASE.length, step = 360 / n;
+    const w = Math.floor(Math.random() * n);
+    const jitter = Math.random() * (step * 0.6) - step * 0.3;
+    const total = (5 + Math.floor(Math.random() * 2)) * 360 - w * step + jitter;
+    const el = document.getElementById("wheelspin"), flap = document.getElementById("flapper");
+    const dur = 6200, t0 = performance.now();
+    let lastPeg = 0;
+    const frame = now => {
+      const t = Math.min(1, Math.max(0, (now - t0) / dur));
+      const ang = total * (1 - Math.pow(1 - t, 3.2));
+      if (el) el.setAttribute("transform", `rotate(${ang.toFixed(2)})`);
+      const peg = Math.floor((ang + step / 2) / step);
+      if (peg !== lastPeg) { lastPeg = peg; tick(flap); }
+      if (t < 1) requestAnimationFrame(frame);
+      else {
+        const wedge = document.querySelector(`.wedge[data-i="${w}"]`);
+        if (wedge) wedge.classList.add("landed");
+        land(WHEEL_BASE[w] * mult());
+      }
+    };
+    if (el) requestAnimationFrame(frame); else land(WHEEL_BASE[w] * mult());
+  }
+  function tick(flap) {
+    if (flap && flap.animate) flap.animate([{ transform: "rotate(-26deg)" }, { transform: "rotate(0deg)" }], { duration: 130, easing: "ease-out" });
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audio.createOscillator(), gn = audio.createGain();
+      o.type = "triangle"; o.frequency.value = 1900;
+      gn.gain.setValueAtTime(0.05, audio.currentTime);
+      gn.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.035);
+      o.connect(gn); gn.connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.04);
+    } catch (e) { /* no sound */ }
   }
   function plinkoX(p) { return 30 + 30 * p; }
   function dropChip(aim) {
@@ -654,26 +673,51 @@
       </div>
     </section>`;
   }
+  // A game show prize wheel: stacked digits reading from the rim inward, pegs on the rim, a flapper at the top.
   function viewWheel(cell) {
-    const R = 230, n = WHEEL_BASE.length, step = 360 / n;
-    const pt = deg => { const a = (deg - 90) * Math.PI / 180; return [(R * Math.cos(a)).toFixed(2), (R * Math.sin(a)).toFixed(2)]; };
+    const R = 236, n = WHEEL_BASE.length, step = 360 / n;
+    const pt = (deg, r) => { const a = (deg - 90) * Math.PI / 180; return [(r * Math.cos(a)).toFixed(2), (r * Math.sin(a)).toFixed(2)]; };
     const wedges = WHEEL_BASE.map((v, i) => {
-      const [x0, y0] = pt(i * step - step / 2), [x1, y1] = pt(i * step + step / 2);
+      const [x0, y0] = pt(i * step - step / 2, R), [x1, y1] = pt(i * step + step / 2, R);
       const top = i === WHEEL_TOP;
-      const fill = top ? "#f4f6ff" : WHEEL_COLORS[i % WHEEL_COLORS.length];
-      const ink = top || fill === "#f2b632" ? "#1b1f33" : "#ffffff";
-      return `<g class="wedge" data-i="${i}"><path d="M0 0 L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z" fill="${fill}" stroke="#0a1238" stroke-width="2"/>
-        <text transform="rotate(${i * step}) translate(0 -${R - 62}) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="${top ? 26 : 23}" fill="${ink}">${fmt(v * mult())}</text></g>`;
+      const fill = top ? "url(#silver)" : WHEEL_COLORS[i % WHEEL_COLORS.length];
+      const light = top || WHEEL_COLORS[i % WHEEL_COLORS.length] === "#f6c21c";
+      const ink = light ? "#1b1b1b" : "#ffffff";
+      const digits = String(v * mult()).split("");
+      const size = digits.length > 3 ? 27 : 31;
+      const gap = size * 0.86;
+      const stack = digits.map((d, k) => `<text x="0" y="${-(R - 30) + k * gap}" text-anchor="middle" dominant-baseline="central" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="${size}" fill="${ink}" stroke="${light ? "none" : "#00000055"}" stroke-width="1">${d}</text>`).join("");
+      return `<g class="wedge" data-i="${i}">
+        <path d="M0 0 L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z" fill="${fill}" stroke="#2a2a2a" stroke-width="2.5"/>
+        <g transform="rotate(${i * step})">${stack}</g></g>`;
     }).join("");
-    const bulbs = Array.from({ length: 24 }, (_, i) => { const a = (i * 15 - 90) * Math.PI / 180; return `<circle class="bulb" cx="${(R + 14) * Math.cos(a)}" cy="${(R + 14) * Math.sin(a)}" r="4.5" style="animation-delay:${(i % 2) * 0.35}s"/>`; }).join("");
+    const pegs = Array.from({ length: n }, (_, i) => { const [x, y] = pt(i * step + step / 2, R - 9); return `<circle cx="${x}" cy="${y}" r="5.5" fill="url(#peg)" stroke="#5a4100" stroke-width="1.5"/>`; }).join("");
+    const bulbs = Array.from({ length: 36 }, (_, i) => { const a = (i * 10 - 90) * Math.PI / 180; return `<circle class="bulb" cx="${((R + 17) * Math.cos(a)).toFixed(1)}" cy="${((R + 17) * Math.sin(a)).toFixed(1)}" r="5" style="animation-delay:${(i % 2) * 0.35}s"/>`; }).join("");
     return `<section class="stage roll-stage">
       <div class="wheel-wrap">
-        <svg class="wheel" viewBox="-262 -275 524 540" role="img" aria-label="Prize wheel">
-          <circle r="${R + 22}" fill="#0a1238" stroke="#f2b632" stroke-width="6"/>
+        <div class="wheel-tilt">
+        <svg class="wheel" viewBox="-275 -300 550 580" role="img" aria-label="Prize wheel">
+          <defs>
+            <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#cfd5e2"/><stop offset="1" stop-color="#f4f6fb"/></linearGradient>
+            <radialGradient id="peg"><stop offset="0" stop-color="#fff6c8"/><stop offset="1" stop-color="#c8960e"/></radialGradient>
+            <radialGradient id="hub"><stop offset="0" stop-color="#ffe680"/><stop offset="0.7" stop-color="#e2a90e"/><stop offset="1" stop-color="#8a5d00"/></radialGradient>
+          </defs>
+          <circle r="${R + 30}" fill="#1b1f33"/>
+          <circle r="${R + 30}" fill="none" stroke="#e2a90e" stroke-width="5"/>
           ${bulbs}
-          <g id="wheelspin" class="wheelspin">${wedges}<circle r="46" fill="#0a1238" stroke="#f2b632" stroke-width="5"/><text text-anchor="middle" dominant-baseline="central" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="24" fill="#f2b632">SPIN</text></g>
-          <path d="M-20 -270 L20 -270 L0 -224 Z" fill="#f2b632" stroke="#0a1238" stroke-width="3"/>
+          <g id="wheelspin" transform="rotate(0)">
+            ${wedges}${pegs}
+            <circle r="${R}" fill="none" stroke="#2a2a2a" stroke-width="4"/>
+            <circle r="58" fill="url(#hub)" stroke="#5a4100" stroke-width="4"/>
+            <circle r="44" fill="none" stroke="#fff3c4" stroke-width="2" opacity="0.7"/>
+            ${Array.from({ length: 8 }, (_, i) => `<path d="M0 -40 L5 -6 L0 0 L-5 -6 Z" fill="#fff3c4" opacity="0.8" transform="rotate(${i * 45})"/>`).join("")}
+          </g>
+          <g id="flapper" class="flapper">
+            <path d="M-17 -296 L17 -296 L4 -232 L-4 -232 Z" fill="#d7263d" stroke="#ffffff" stroke-width="3"/>
+            <circle cx="0" cy="-286" r="7" fill="#ffffff"/>
+          </g>
         </svg>
+        </div>
         ${rollInfo(cell, "tap Spin")}
       </div>
     </section>`;
