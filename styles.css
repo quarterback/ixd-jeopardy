@@ -514,3 +514,12 @@ button { cursor: pointer; }
 .zap { transform-box: fill-box; transform-origin: center; animation: zap 0.3s ease-in-out infinite alternate; }
 @keyframes zap { from { opacity: 0.3; transform: scale(0.8) rotate(-10deg); } to { opacity: 1; transform: scale(1.2) rotate(10deg); } }
 @media (prefers-reduced-motion: reduce) { .grem, .grem .eye, .zap { animation: none; } }
+
+/* ---------- Special button and auto return ---------- */
+.btn.special { background: #c2338f; border-color: #e46bb8; color: #fff; }
+.btn.special:hover { background: #d8459f; }
+.special-due { background: linear-gradient(90deg, #3d0f2d, #5a1844); border-color: #e46bb8; animation-name: glowpink; }
+.special-due b { color: #ff9ad6; }
+@keyframes glowpink { from { box-shadow: 0 0 0 rgba(228,107,184,0); } to { box-shadow: 0 0 24px rgba(228,107,184,0.6); } }
+.autoback { display: inline-flex; align-items: center; gap: 10px; margin-left: 8px; color: var(--ink-dim); font-weight: 600; }
+.autoback .btn { padding: 6px 12px; }

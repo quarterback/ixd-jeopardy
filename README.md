@@ -27,7 +27,7 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 3. Press **Space**. The clock starts and the four answers appear on the board and on team devices. The question itself never appears on team devices, which makes it harder to paste into a chatbot.
 4. Each team taps an answer and then **Lock in**. A locked answer can't change. Your screen shows "3 of 6 locked in" and "Locked in" on each card, never the letter.
 5. Press **R** to reveal. The board shows who picked what and how many points each team got. Each team's device shows its own result.
-6. Press **B** to go back to the board.
+6. The game goes back to the board on its own after a countdown (8 seconds by default, set in setup). Click **Stay here** to keep the answer up, or press **B** to go back sooner.
 
 **Daily Doubles and the final wager**: captains type their wager on their device. Your screen shows "Wager in" without the amount. Press **R** to show the question, then **Space** for the clock.
 
@@ -37,12 +37,13 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 
 Each round, every team gets one Special: a bonus question only that team answers.
 
-* The game spaces Specials evenly through the round. When one is due, the board shows **Special for (team)** with a **Roll it** button. **Roll a Special** in the bottom bar starts the next one any time.
+* A Special comes due after every 2 regular squares, so every team gets theirs even when you only go around the teams twice. The board shows **Special for (team)** with a magenta **Roll it** button. The magenta **Roll a Special** button, or the **P** key, starts the next one any time.
 * Specials go in reverse team order. The last team gets the first Special of every round, and every round starts the order again.
-* How the amount gets picked changes by round. Values double in Double Jeopardy and triple in Triple Jeopardy.
-  * **Jeopardy:** a board of 16 point values with a light jumping between them. The team presses **Stop** on its device, or you press **Space**.
-  * **Double Jeopardy:** each Special is randomly a **wheel** or **Plinko**. On the prize wheel, the team taps **Spin**. The wheel has 24 bright wedges with a $ and the points stacked digit by digit, a gold rim and hub, a flapper at the top that clicks as it slows, and one silver top wedge. On Plinko, the team picks one of five drop spots and the chip bounces down into one of 9 slots; the middle pays most and the slots beside it pay least. Every wedge and slot pays something. You can spin with **Space**, or drop from any spot by clicking the arrows above the board.
-  * **Triple Jeopardy:** any of the three.
+* If you end a round while some teams haven't had their Special, the game asks first: play the remaining Specials now, one after another, or end the round anyway.
+* Every round mixes three rollers in a shuffled order, never the same one twice in a row. Values double in Double Jeopardy and triple in Triple Jeopardy.
+  * **Light board:** 16 point values with a light jumping between them. The team presses **Stop** on its device, or you press **Space**.
+  * **Prize wheel:** the team taps **Spin**. 24 bright wedges with a $ and the points stacked digit by digit, a gold rim and hub, a flapper that clicks as it slows, and one silver top wedge.
+  * **Plinko:** the team picks one of five drop spots and the chip bounces into one of 9 slots; the middle pays most. You can drop from any spot by clicking the arrows above the board.
 * The question comes from any category and is never one already used in the game. Other teams sit it out.
 * Some spaces on every roller are **No Special**: 3 squares on the light board, 4 LOSE A TURN wedges on the wheel, and the 2 Plinko slots beside the middle. Each roller comes up empty about 1 time in 6. When it does, gremlins pop out, the team gets no question and loses no points, and their Special for that round is used up.
 * A right answer earns the team the amount, and characters bring the money. A wrong answer costs nothing; the characters laugh, and that's it.
@@ -74,6 +75,7 @@ Each round, every team gets one Special: a bonus question only that team answers
 | R or Enter | Show the question, reveal, or hide the answer |
 | B | Back to the board |
 | S | Scoreboard |
+| P | Roll the next Special (from the board) |
 | Esc | Close a panel |
 
 ## Editing questions

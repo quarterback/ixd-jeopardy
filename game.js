@@ -123,7 +123,7 @@
   // ---------- state ----------
   let S = load();
   if (S && !S.cfg) S = null;
-  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 5, secs: 25, mode: "devices", final: true, specials: true };
+  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 5, secs: 25, mode: "devices", final: true, specials: true, autoBack: 8 };
   if (S) draft = Object.assign({}, draft, S.cfg, { names: S.teams.map(t => t.name) });
   let overlay = null, confirmNew = false, setupError = "", starting = false;
   let celebrate = null, celebrateTimer = null;
@@ -196,23 +196,30 @@
     for (let t = S.teams.length - 1; t >= 0; t--) if (!done.includes(t)) return t;
     return null;
   }
-  // Spread the Specials evenly through the round's squares.
+  // A Special comes due after every 2 regular squares, so every team gets one in a short round.
+  const SPECIAL_EVERY = 2;
   function specialDue(ri) {
     if (!specialsLeft(ri)) return false;
-    const n = S.cfg.cats * S.cfg.rows, k = specDone(ri).length;
-    return squaresDone(ri) >= Math.max(1, Math.round((k + 1) * n / (S.teams.length + 1)));
+    return squaresDone(ri) >= SPECIAL_EVERY * (specDone(ri).length + 1);
   }
-  // Round one rolls the light board. Round two rolls a wheel or Plinko. Round three can be any of them.
-  function rollTypeFor(ri) {
-    const opts = ri === 0 ? ["board"] : ri === 1 ? ["wheel", "plinko"] : ["board", "wheel", "plinko"];
-    return opts[Math.floor(Math.random() * opts.length)];
+  // Every round mixes all three rollers in a shuffled order, never the same one twice in a row.
+  function nextRollType(ri) {
+    S.rollQueue = S.rollQueue || {};
+    S.lastRoll = S.lastRoll || {};
+    let q = S.rollQueue[ri] || [];
+    if (!q.length) {
+      do { q = shuffle(["board", "wheel", "plinko"]); } while (q[0] === S.lastRoll[ri]);
+    }
+    const t = q.shift();
+    S.rollQueue[ri] = q; S.lastRoll[ri] = t;
+    return t;
   }
   function startSpecial(team) {
     S.specCount = S.specCount || {};
     const n = S.specCount[S.ri] = (S.specCount[S.ri] || 0) + 1;
     const key = `${S.ri}-s-${n}`;
     S.specials = S.specials || {};
-    S.specials[key] = { bonus: true, team, value: 0, roll: rollTypeFor(S.ri), q: drawSpecialQ() };
+    S.specials[key] = { bonus: true, team, value: 0, roll: nextRollType(S.ri), q: drawSpecialQ() };
     S.cur = key; S.view = "question"; res(key);
   }
 
@@ -327,6 +334,7 @@
       if (center) center.innerHTML = `<p class="roll-title nos">No Special</p><p class="roll-team">${esc(S.teams[cell.team].name)}</p>`;
       setTimeout(() => {
         r.rolled = true; r.whammy = true; roll = null;
+        scheduleAutoBack(6);
         showWhammy(cell);
         persist(); publish(); render();
       }, 1300);
@@ -482,18 +490,46 @@
     } else if (cell.bonus) {
       // Leaving a Special unplayed: the team keeps its Special for later in the round.
       delete S.res[key]; delete S.specials[key];
+      S.flushing = false;
     } else {
       S.teams.forEach(tm => { if (tm.doubleUsed === key) tm.doubleUsed = null; });
       delete S.res[key];
       S.attempts[key] = ((S.attempts && S.attempts[key]) || 0) + 1;
     }
     S.cur = null; S.view = "board";
+    afterBoardReturn();
   }
+  // When the host chose to play the remaining Specials before ending a round, keep them coming.
+  function afterBoardReturn() {
+    if (!S.flushing) return;
+    const t = nextSpecialTeam(S.ri);
+    if (specialsLeft(S.ri) && t != null) startSpecial(t);
+    else { S.flushing = false; S.view = "results"; }
+  }
+  // After a reveal the game returns to the board on its own, after a countdown the host can stop.
+  let autoBack = null; // { key, at }
+  function scheduleAutoBack(extraSecs) {
+    const secs = Number(S.cfg.autoBack);
+    if (!secs || S.cur === "final") { autoBack = null; return; }
+    autoBack = { key: S.cur, at: Date.now() + (secs + (extraSecs || 0)) * 1000 };
+  }
+  function cancelAutoBack() { autoBack = null; }
+  setInterval(() => {
+    if (!autoBack || !S) return;
+    if (S.view !== "question" || S.cur !== autoBack.key || overlay) { if (S.cur !== autoBack.key) autoBack = null; return; }
+    const left = Math.ceil((autoBack.at - Date.now()) / 1000);
+    const el = document.getElementById("autoback");
+    if (el) el.textContent = `Back to the board in ${Math.max(0, left)}`;
+    if (left <= 0) { autoBack = null; celebrate = null; whammy = null; act(backToBoard); }
+  }, 250);
   function skipSpecial() {
     const key = S.cur, cell = cellAt(key);
     if (!cell || !cell.bonus) return;
     if (!specDone(S.ri).includes(cell.team)) specDone(S.ri).push(cell.team);
     delete S.res[key]; delete S.specials[key];
+    S.cur = null; S.view = "board";
+    afterBoardReturn();
+    return;
     S.cur = null; S.view = "board";
   }
   function newSpecialQuestion() {
@@ -540,8 +576,10 @@
       if (live()) { try { const d = await api("GET", `/${S.room.code}/subs?qid=${encodeURIComponent(qid(S.cur))}`); applySubs(d.teams); } catch (e) { /* reveal with what we have */ } }
       r.revealed = true;
       if (cell.bonus) showCelebration(r.picks[cell.team] === cell.q.answer, cell);
+      scheduleAutoBack(cell.bonus ? 6 : 0);
     } else {
       r.revealed = false;
+      cancelAutoBack();
     }
     persist(); publish(); render();
   }
@@ -594,6 +632,7 @@
               ${field("rows", "Questions per category", [3, 4, 5], draft.rows, v => v)}
               ${field("secs", "Answer clock", [15, 20, 25, 30, 45, 60], draft.secs, v => v + " seconds")}
               ${onOff("specials", "Specials, one per team each round", draft.specials !== false)}
+              ${field("autoBack", "After the reveal, back to the board in", [0, 5, 8, 12, 20], draft.autoBack == null ? 8 : draft.autoBack, v => v ? v + " seconds" : "Only when I click")}
               ${onOff("final", "Final Jeopardy", draft.final)}
             </div>
             <p class="note">Round one ${values(1)}.${draft.rounds > 1 ? ` Double Jeopardy ${values(2)}.` : ""}${draft.rounds > 2 ? ` Triple Jeopardy ${values(3)}.` : ""}</p>
@@ -661,7 +700,7 @@
     const left = specialsLeft(S.ri), nextT = nextSpecialTeam(S.ri);
     let line = done ? "Board cleared." : `Next pick: <b>${esc(S.teams[S.picker].name)}</b>`;
     if (left) line += ` <span class="sep">·</span> Specials left this round: ${left}`;
-    const banner = specialDue(S.ri) && nextT != null ? `<div class="special-due"><span>Special for <b>${esc(S.teams[nextT].name)}</b></span><button class="btn primary" data-act="special">Roll it</button></div>` : "";
+    const banner = specialDue(S.ri) && nextT != null ? `<div class="special-due"><span>Special for <b>${esc(S.teams[nextT].name)}</b></span><button class="btn special" data-act="special">Roll it<kbd>P</kbd></button></div>` : "";
     return `
     <section class="board-stage">
       <div class="board" style="--cols:${round.cols.length}">
@@ -912,7 +951,7 @@
       const done = roundDone(S.ri), left = specialsLeft(S.ri);
       return `<footer class="hostbar">
         <button class="btn ${done && !left ? "primary" : ""}" data-act="endround">End ${ROUND_NAMES[S.ri] || "round"} and show standings</button>
-        ${left ? `<button class="btn ${done ? "primary" : ""}" data-act="special">Roll a Special</button>` : ""}
+        ${left ? `<button class="btn special" data-act="special">Roll a Special for ${esc(S.teams[nextSpecialTeam(S.ri)].name)}<kbd>P</kbd></button>` : ""}
         <span class="spacer"></span>
         <button class="btn" data-act="key">Answer key</button>
         <button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button>
@@ -925,7 +964,7 @@
     }
     const r = res(S.cur), cell = cellAt(S.cur);
     if (cell.bonus && r.whammy) {
-      return `<footer class="hostbar"><button class="btn primary" data-act="board">Back to board<kbd>B</kbd></button><span class="spacer"></span><button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button><button class="btn" data-act="menu">Menu</button></footer>`;
+      return `<footer class="hostbar"><button class="btn primary" data-act="board">Back to board<kbd>B</kbd></button>${autoChip()}<span class="spacer"></span><button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button><button class="btn" data-act="menu">Menu</button></footer>`;
     }
     if (cell.bonus && !r.rolled) {
       const done = specDone(S.ri);
@@ -949,12 +988,17 @@
       <button class="btn" data-act="board">${back}<kbd>B</kbd></button>
       <button class="btn primary" data-act="main">${main}<kbd>${key}</kbd></button>
       ${cell.bonus && !r.revealed ? `<button class="btn" data-act="newq">New question</button>` : ""}
+      ${r.revealed ? autoChip() : ""}
       <span class="spacer"></span>
       <button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button>
       <button class="btn" data-act="menu">Menu</button>
     </footer>`;
   }
 
+  function autoChip() {
+    if (!autoBack || autoBack.key !== S.cur) return "";
+    return `<span class="autoback"><span id="autoback">Back to the board in ${Math.max(0, Math.ceil((autoBack.at - Date.now()) / 1000))}</span><button class="btn" data-act="stayhere">Stay here</button></span>`;
+  }
   function viewStandings(withAdjust) {
     const order = S.teams.map((tm, t) => ({ t, name: tm.name, s: score(t) })).sort((a, b) => b.s - a.s);
     const top = Math.max(1, ...order.map(o => o.s));
@@ -1074,6 +1118,19 @@
   }
 
   function viewOverlay() {
+    if (overlay === "endcheck") {
+      const left = specialsLeft(S.ri);
+      const names = S.teams.map((tm, t) => specDone(S.ri).includes(t) ? null : tm.name).filter(Boolean);
+      return `<div class="overlay" data-close><div class="panel" role="dialog" aria-label="Specials left">
+        <h2>${left} ${left === 1 ? "team hasn't" : "teams haven't"} had their Special</h2>
+        <p class="note">${esc(names.join(", "))}</p>
+        <div class="row">
+          <button class="btn special" data-act="flushspecials">Play the Specials now</button>
+          <button class="btn" data-act="endanyway">End the round anyway</button>
+          <button class="btn" data-act="close">Keep playing</button>
+        </div>
+      </div></div>`;
+    }
     if (overlay === "scores") {
       return `<div class="overlay" data-close><div class="panel" role="dialog" aria-label="Scoreboard">
         <div class="row between"><h2>Scoreboard</h2><button class="btn" data-act="close">Close<kbd>Esc</kbd></button></div>
@@ -1144,7 +1201,7 @@
 
   app.addEventListener("change", e => {
     const el = e.target;
-    if (["rounds", "cats", "rows", "secs"].includes(el.id)) { draft[el.id] = Number(el.value); render(); }
+    if (["rounds", "cats", "rows", "secs", "autoBack"].includes(el.id)) { draft[el.id] = Number(el.value); render(); }
     if (el.id === "mode") { draft.mode = el.value; setupError = ""; render(); }
     if (el.id === "final" || el.id === "specials") { draft[el.id] = el.value === "1"; render(); }
     if (el.id === "special-team") { act(() => { const cell = cellAt(S.cur); if (cell && cell.bonus) cell.team = Number(el.value); }); }
@@ -1185,7 +1242,13 @@
       case "skipspecial": act(skipSpecial); break;
       case "newq": act(newSpecialQuestion); break;
       case "tostart": act(() => { S.view = "board"; }); break;
-      case "endround": act(() => { S.view = "results"; }); break;
+      case "endround":
+        if (specialsLeft(S.ri)) { overlay = "endcheck"; render(); }
+        else act(() => { S.view = "results"; });
+        break;
+      case "flushspecials": overlay = null; act(() => { S.flushing = true; afterBoardReturn(); }); break;
+      case "endanyway": overlay = null; act(() => { S.view = "results"; }); break;
+      case "stayhere": cancelAutoBack(); render(); break;
       case "afterresults": act(afterResults); break;
       case "scores": overlay = "scores"; render(); break;
       case "menu": overlay = "menu"; confirmNew = false; render(); break;
@@ -1208,6 +1271,7 @@
     if (e.key === "Escape" && overlay) { overlay = null; confirmNew = false; render(); return; }
     if (!S || overlay) return;
     if (e.key === "s" || e.key === "S") { overlay = "scores"; render(); return; }
+    if ((e.key === "p" || e.key === "P") && S.view === "board") { const t = nextSpecialTeam(S.ri); if (specialsLeft(S.ri) && t != null) act(() => startSpecial(t)); return; }
     if (S.view !== "question") return;
     const r = res(S.cur);
     if (e.key === " ") { e.preventDefault(); if (r.whammy) return; if (!r.rolled) stopRoll(); else if (r.shown && !r.startedAt) startClock(); }
