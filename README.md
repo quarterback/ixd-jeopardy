@@ -18,7 +18,8 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 2. Pick **Teams answer on: Their own phones or laptops**, then the rounds and board size. Round one is 100 to 500, Double Jeopardy 200 to 1000, and the optional Triple Jeopardy 300 to 1500.
 3. Click **Draw boards and start**. The lobby shows the join address, a room code and a QR code.
 4. One captain per team goes to `yoursite.netlify.app/play`, enters the code and taps their team. The lobby ticks each team off as it joins.
-5. Click **Answer key** to open this game's answers in a separate window. Keep it off the screen you share.
+5. Anyone who wants to follow along without a team goes to `yoursite.netlify.app/watch` and enters the same code. They see your screen as it plays: the board, questions, clock, reveals, rollers and standings, on a phone or a laptop. They can't answer, and they never get the answer key or an answer before you reveal it.
+6. Click **Answer key** to open this game's answers in a separate window. Keep it off the screen you share.
 
 ## Running a square
 

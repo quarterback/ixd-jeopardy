@@ -22,10 +22,12 @@
   const PLINKO_ROWS = 8;
   const NO_SPECIAL_ODDS = 1 / 6; // Plinko only; the board and wheel get their odds from how many empty spaces they have
   const app = document.getElementById("app");
+  // watch.html sets this. A watcher sees what the host's screen shows and can't change anything.
+  const WATCH = window.DJ_WATCH === true;
 
   // ---------- storage ----------
   function load() { try { const r = localStorage.getItem(STORE); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
-  function persist() { try { if (S) localStorage.setItem(STORE, JSON.stringify(S)); else localStorage.removeItem(STORE); } catch (e) { /* storage off */ } }
+  function persist() { if (WATCH) return; try { if (S) localStorage.setItem(STORE, JSON.stringify(S)); else localStorage.removeItem(STORE); } catch (e) { /* storage off */ } }
 
   // ---------- helpers ----------
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
@@ -61,7 +63,8 @@
   let netError = "";
   function queue(fn) { chain = chain.then(fn, fn); return chain; }
   function publish(extra) {
-    if (!live()) return Promise.resolve(null);
+    if (!live() || WATCH) return Promise.resolve(null);
+    publishWatch();
     const str = JSON.stringify(pubState());
     if (!extra && str === lastPub) return chain;
     lastPub = str;
@@ -121,7 +124,7 @@
   }
 
   // ---------- state ----------
-  let S = load();
+  let S = WATCH ? null : load();
   if (S && !S.cfg) S = null;
   let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 5, secs: 25, mode: "devices", final: true, specials: true, autoBack: 8 };
   if (S) draft = Object.assign({}, draft, S.cfg, { names: S.teams.map(t => t.name) });
@@ -243,10 +246,51 @@
     });
   }
 
+  // What watchers at /watch get: the host's screen, with no answers, picks or wagers before the reveal.
+  // Squares nobody has opened carry no question at all.
+  function watchState() {
+    const keep = (key, cell) => {
+      if (!cell) return cell;
+      const r = S.res[key], c = Object.assign({}, cell);
+      if (key === S.cur) {
+        c.q = Object.assign({}, cell.q);
+        if (!(r && r.revealed)) { c.q.answer = null; c.q.why = ""; c.q.src = ""; }
+      } else if (r && r.revealed) c.q = { answer: cell.q.answer };
+      else { c.q = null; if (!r) c.dd = false; }
+      return c;
+    };
+    const hide = (obj, v) => { const o = {}; for (const k in obj) o[k] = v; return o; };
+    const resOut = {};
+    for (const key in S.res) {
+      const r = S.res[key];
+      resOut[key] = r.revealed ? r : Object.assign({}, r, { picks: hide(r.picks, -1), wagers: hide(r.wagers, 0), at: {} });
+    }
+    const specials = {};
+    for (const key in S.specials || {}) specials[key] = keep(key, S.specials[key]);
+    return {
+      cfg: S.cfg, teams: S.teams.map(t => ({ name: t.name, adj: t.adj, doubleUsed: null })),
+      rounds: S.rounds.map((round, ri) => ({ cols: round.cols.map((col, c) => ({ cat: col.cat, cells: col.cells.map((cell, k) => keep(`${ri}-${c}-${k}`, cell)) })) })),
+      final: S.final ? keep("final", S.final) : null, specials, res: resOut,
+      ri: S.ri, view: S.view, cur: S.cur, picker: S.picker, attempts: S.attempts, specDone: S.specDone,
+      room: { code: S.room.code }, claims: S.claims
+    };
+  }
+  let lastWatch = "";
+  function publishWatch() {
+    if (!live() || WATCH) return;
+    const st = watchState(), str = JSON.stringify(st);
+    if (str === lastWatch) return;
+    lastWatch = str;
+    queue(async () => {
+      if (!S || !S.room) return;
+      try { await api("PUT", `/${S.room.code}/watch`, { watch: st }); } catch (e) { lastWatch = ""; }
+    });
+  }
+
   // ---------- polling team devices ----------
   let polling = false;
   async function poll() {
-    if (!live() || polling) return;
+    if (WATCH || !live() || polling) return;
     const inQ = S.view === "question" && S.cur && !res(S.cur).revealed;
     if (S.view !== "lobby" && !inQ && overlay !== "devices") return;
     polling = true;
@@ -291,10 +335,10 @@
     if (!S || S.view !== "question" || !S.cur) { if (roll && roll.timer) clearTimeout(roll.timer); if (!roll || !roll.stopping) roll = null; return; }
     const cell = cellAt(S.cur), r = res(S.cur);
     if (!cell.bonus || r.rolled) { if (roll && roll.timer) clearTimeout(roll.timer); roll = null; return; }
-    if (roll && roll.key === S.cur) { paintRoll(); return; }
+    if (roll && roll.key === S.cur) { paintRoll(); watchRoll(cell); return; }
     if (roll && roll.timer) clearTimeout(roll.timer);
     roll = { key: S.cur, type: rollType(cell), lit: Math.floor(Math.random() * 16), timer: null, stopping: false };
-    if (roll.type !== "board") return;
+    if (watchRoll(cell) || roll.type !== "board") return;
     const mine = roll;
     const step = () => {
       if (roll !== mine || mine.stopping) return;
@@ -303,26 +347,62 @@
     };
     step();
   }
+  // A watcher plays the host's roll once it arrives. If it arrived long ago, skip straight to the result.
+  function watchRoll(cell) {
+    if (!WATCH || !cell.anim || roll.stopping) return false;
+    roll.stopping = true;
+    clearTimeout(roll.timer);
+    if (serverNow() - cell.anim.at > 9000) { roll.done = true; return true; }
+    playRoll(cell.anim, watchLanded);
+    return true;
+  }
   function nextLit(cur) { let n; do { n = Math.floor(Math.random() * 16); } while (n === cur); return n; }
   function paintRoll() {
     if (!roll || roll.type !== "board") return;
     document.querySelectorAll(".rcell").forEach(el => el.classList.toggle("lit", Number(el.dataset.i) === roll.lit));
   }
+  // The host decides where a roll lands up front and saves it on the Special as cell.anim,
+  // so watchers can play the very same animation.
   function stopRoll(aim) {
     if (!roll || roll.stopping || roll.key !== S.cur) return;
     roll.stopping = true;
-    if (roll.type === "wheel") return spinWheel();
-    if (roll.type === "plinko") return dropChip(Number.isInteger(aim) ? aim : 2);
     clearTimeout(roll.timer);
+    let a;
+    if (roll.type === "wheel") a = wheelPlan();
+    else if (roll.type === "plinko") a = { type: "plinko", ps: plinkoPath(Number.isInteger(aim) ? aim : 2) };
+    else { const seq = []; let n = roll.lit; for (let i = 0; i < 6; i++) { n = nextLit(n); seq.push(n); } a = { type: "board", seq }; }
+    a.at = serverNow();
+    cellAt(S.cur).anim = a;
+    publishWatch();
+    playRoll(a, land);
+  }
+  function playRoll(a, done) {
+    if (a.type === "wheel") return spinWheel(a, done);
+    if (a.type === "plinko") return dropChip(a, done);
     const delays = [140, 190, 250, 330, 430, 560];
     let i = 0;
     const slow = () => {
       if (!roll) return;
-      if (i < delays.length) { roll.lit = nextLit(roll.lit); paintRoll(); setTimeout(slow, delays[i++]); return; }
+      if (i < a.seq.length) { roll.lit = a.seq[i]; paintRoll(); setTimeout(slow, delays[i++]); return; }
       document.querySelectorAll(".rcell.lit").forEach(el => el.classList.add("landed"));
-      land(roll.lit, ROLL_BASE[roll.lit]);
+      done(roll.lit, ROLL_BASE[roll.lit]);
     };
     slow();
+  }
+  // On a watcher's screen: show where it landed, then let the next update from the host take over.
+  function watchLanded(index, base) {
+    if (!roll) return;
+    const mine = roll, cell = cellAt(roll.key), center = document.getElementById("rollcenter");
+    if (center && cell) center.innerHTML = base == null
+      ? `<p class="roll-title nos">No Special</p><p class="roll-team">${esc(S.teams[cell.team].name)}</p>`
+      : `<p class="roll-title">Playing for</p><p class="roll-amount">${money(base * mult())}</p>`;
+    setTimeout(() => { if (roll === mine) { mine.done = true; watchRelease(); } }, base == null ? 1300 : 1600);
+  }
+  // Hold the landed roller on screen until the host's update says the roll is over, so it never plays twice.
+  function watchRelease() {
+    if (!roll || !roll.done) return;
+    const r = S && S.res[roll.key];
+    if (!S || S.view !== "question" || S.cur !== roll.key || !r || r.rolled) { roll = null; render(); }
   }
   // base is null for a No Special space. Shows the result for a moment, then moves on.
   function land(index, base) {
@@ -345,11 +425,14 @@
     setTimeout(() => { r.rolled = true; r.shown = true; roll = null; persist(); publish(); render(); }, 1600);
   }
   // Spins with an ease out, ticking the flapper every time a peg passes it.
-  function spinWheel() {
+  function wheelPlan() {
     const n = WHEEL_BASE.length, step = 360 / n;
     const w = Math.floor(Math.random() * n);
     const jitter = Math.random() * (step * 0.6) - step * 0.3;
-    const total = (5 + Math.floor(Math.random() * 2)) * 360 - w * step + jitter;
+    return { type: "wheel", w, total: (5 + Math.floor(Math.random() * 2)) * 360 - w * step + jitter };
+  }
+  function spinWheel(a, done) {
+    const n = WHEEL_BASE.length, step = 360 / n, w = a.w, total = a.total;
     const el = document.getElementById("wheelspin"), flap = document.getElementById("flapper");
     const dur = 6200, t0 = performance.now();
     let lastPeg = 0;
@@ -363,10 +446,10 @@
       else {
         const wedge = document.querySelector(`.wedge[data-i="${w}"]`);
         if (wedge) wedge.classList.add("landed");
-        land(w, WHEEL_BASE[w]);
+        done(w, WHEEL_BASE[w]);
       }
     };
-    if (el) requestAnimationFrame(frame); else land(w, WHEEL_BASE[w]);
+    if (el) requestAnimationFrame(frame); else done(w, WHEEL_BASE[w]);
   }
   function tick(flap) {
     if (flap && flap.animate) flap.animate([{ transform: "rotate(-26deg)" }, { transform: "rotate(0deg)" }], { duration: 130, easing: "ease-out" });
@@ -394,8 +477,8 @@
     for (let k = 0; k < 6000; k++) { const ps = walk(); if (ps[PLINKO_ROWS] / 2 === target) return ps; }
     return walk();
   }
-  function dropChip(aim) {
-    const ps = plinkoPath(aim);
+  function dropChip(a, done) {
+    const ps = a.ps;
     const pts = [[plinkoX(ps[0]), 18]].concat(ps.slice(1).map((p, j) => [plinkoX(p), 90 + j * 55]));
     const slot = ps[PLINKO_ROWS] / 2;
     pts.push([plinkoX(ps[PLINKO_ROWS]), 548]);
@@ -413,10 +496,10 @@
       else {
         const el = document.querySelector(`.pslot[data-i="${slot}"]`);
         if (el) el.classList.add("landed");
-        land(slot, PLINKO_BASE[slot]);
+        done(slot, PLINKO_BASE[slot]);
       }
     };
-    if (chip) requestAnimationFrame(frame); else land(slot, PLINKO_BASE[slot]);
+    if (chip) requestAnimationFrame(frame); else done(slot, PLINKO_BASE[slot]);
   }
 
   // ---------- clock ----------
@@ -472,7 +555,7 @@
       }
       starting = false;
     }
-    S = next; lastPub = "";
+    S = next; lastPub = ""; lastWatch = "";
     persist(); publish(); render();
   }
 
@@ -563,7 +646,7 @@
     } else {
       r.startedAt = serverNow(); r.deadline = r.startedAt + S.cfg.secs * 1000;
     }
-    persist(); render();
+    persist(); publishWatch(); render();
   }
   async function mainAction() {
     if (!S || S.view !== "question") return;
@@ -664,7 +747,8 @@
         right += `<button class="timer" id="timer" title="Start the clock (space)" aria-label="Answer clock"><span>${S.cfg.secs}</span></button>`;
       }
     }
-    const join = live() && S.view !== "lobby" ? `<span class="joinhint">${esc(location.host)}/play · <b>${esc(S.room.code)}</b></span>` : "";
+    const join = WATCH ? `<span class="chip watchchip">Watching</span>`
+      : live() && S.view !== "lobby" ? `<span class="joinhint">${esc(location.host)}/play · <b>${esc(S.room.code)}</b></span>` : "";
     return `
     <header class="topbar">
       <div class="brand">Design <span>Jeopardy</span></div>
@@ -690,6 +774,7 @@
         <h3>${joined.filter(Boolean).length} of ${S.teams.length} teams joined</h3>
         ${S.teams.map((tm, t) => `<div class="lobby-team ${joined[t] ? "in" : ""}"><span>${esc(tm.name)}</span><span class="state">${joined[t] ? "Joined" : "Waiting"}</span></div>`).join("")}
         <p class="note">One device per team. The captain picks the team name, and that device answers for the whole team.</p>
+        <p class="note">Anyone can follow along without a team at <b>${esc(location.host)}/watch</b> with the same code.</p>
       </div>
     </section>`;
   }
@@ -944,6 +1029,7 @@
   }
 
   function viewHost() {
+    if (WATCH) return "";
     if (S.view === "lobby") {
       return `<footer class="hostbar"><button class="btn primary" data-act="tostart">Start the game</button><span class="spacer"></span><button class="btn" data-act="key">Answer key</button><button class="btn" data-act="menu">Menu</button></footer>`;
     }
@@ -1021,7 +1107,7 @@
         <div style="width:100%">${viewStandings(false)}</div>
       </div>
     </section>
-    <footer class="hostbar"><span class="spacer"></span><button class="btn" data-act="key">Answer key</button><button class="btn" data-act="menu">Menu</button></footer>`;
+    ${WATCH ? "" : `<footer class="hostbar"><span class="spacer"></span><button class="btn" data-act="key">Answer key</button><button class="btn" data-act="menu">Menu</button></footer>`}`;
   }
 
   // ---------- the Special characters ----------
@@ -1118,6 +1204,7 @@
   }
 
   function viewOverlay() {
+    if (WATCH) return "";
     if (overlay === "endcheck") {
       const left = specialsLeft(S.ri);
       const names = S.teams.map((tm, t) => specDone(S.ri).includes(t) ? null : tm.name).filter(Boolean);
@@ -1147,7 +1234,7 @@
           ${S.view !== "end" ? `<button class="btn" data-act="endgame">Show final scores now</button>` : ""}
           <button class="btn" data-act="newgame">${confirmNew ? "Click again to end this game" : "New game"}</button>
         </div>
-        ${live() ? `<p class="note">Room code ${esc(S.room.code)}. Teams join at ${esc(location.host)}/play.</p>` : ""}
+        ${live() ? `<p class="note">Room code ${esc(S.room.code)}. Teams join at ${esc(location.host)}/play. Anyone can watch at ${esc(location.host)}/watch.</p>` : ""}
         <p class="note">Scores save in this browser, so a refresh won't lose the game.</p>
       </div></div>`;
     }
@@ -1175,7 +1262,7 @@
   }
 
   function render() {
-    if (!S) { app.innerHTML = viewSetup(); return; }
+    if (!S) { app.innerHTML = WATCH ? viewWatchJoin() : viewSetup(); return; }
     if (roll && roll.stopping && S.view === "question" && S.cur === roll.key) return;
     let body = viewTop();
     if (S.view === "lobby") body += viewLobby() + viewHost();
@@ -1201,6 +1288,74 @@
     });
   }
   addEventListener("resize", () => { if (S && S.view === "board") fitHeads(); });
+
+  // ---------- watching ----------
+  let watchCode = "", watchMsg = "", lastWatchIn = "";
+  function viewWatchJoin() {
+    const waiting = watchCode && !watchMsg;
+    return `
+    <section class="setup watch-join">
+      <h1>Design <span>Jeopardy</span></h1>
+      <form class="panel" id="watch-form">
+        <h3>Watch a game</h3>
+        <div class="field"><label for="watch-code">Room code</label>
+          <input id="watch-code" value="${esc(watchCode)}" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+        ${watchMsg ? `<p class="msg bad">${esc(watchMsg)}</p>` : waiting ? `<p class="note">Waiting for the host to start room ${esc(watchCode)}.</p>` : ""}
+        <div class="row"><button type="submit" class="btn primary">Watch</button></div>
+        <p class="note">To answer for a team, go to ${esc(location.host)}/play instead.</p>
+      </form>
+    </section>`;
+  }
+  // Something happened on the host's screen since the last update: bring out the characters too.
+  function watchEvents(prev) {
+    if (prev && (prev.cur !== S.cur || prev.view !== S.view)) { celebrate = null; whammy = null; }
+    if (!prev || S.view !== "question" || !S.cur || prev.cur !== S.cur) return;
+    const r = S.res[S.cur], pr = prev.res[S.cur], cell = cellAt(S.cur);
+    if (!r || !pr || !cell || !cell.bonus) return;
+    if (r.whammy && !pr.whammy) showWhammy(cell);
+    if (r.revealed && !pr.revealed) showCelebration(r.picks[cell.team] === cell.q.answer, cell);
+  }
+  let watching = false;
+  async function watchPoll() {
+    if (!WATCH || !watchCode || watching) return;
+    watching = true;
+    try {
+      const res = await fetch(`/api/rooms/${encodeURIComponent(watchCode)}/watch`, { cache: "no-store" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (!S) { watchMsg = d.message || "Couldn't find that game."; watchCode = ""; render(); }
+        return;
+      }
+      noteTime(d.now);
+      if (!d.watch) { if (!S) render(); return; }
+      const str = JSON.stringify(d.watch);
+      if (str === lastWatchIn) return;
+      lastWatchIn = str;
+      const prev = S;
+      S = d.watch;
+      watchEvents(prev);
+      if (roll && roll.done) watchRelease(); else render();
+    } catch (e) { /* try again on the next tick */ }
+    finally { watching = false; }
+  }
+  function startWatching(code) {
+    watchCode = String(code || "").trim().toUpperCase().replace(/[^A-Z]/g, "");
+    watchMsg = ""; S = null; lastWatchIn = "";
+    if (!watchCode) { watchMsg = "Enter the 4 letter room code."; render(); return; }
+    try { history.replaceState(null, "", location.pathname + "?room=" + watchCode); } catch (e) { /* fine */ }
+    render(); watchPoll();
+  }
+  if (WATCH) {
+    document.title = "Watch Design Jeopardy";
+    setInterval(watchPoll, 1000);
+    const fromURL = new URLSearchParams(location.search).get("room");
+    if (fromURL) setTimeout(() => startWatching(fromURL), 0);
+    app.addEventListener("submit", e => { e.preventDefault(); if (e.target.id === "watch-form") startWatching(document.getElementById("watch-code").value); });
+    app.addEventListener("click", e => { if ((celebrate || whammy) && e.target.closest("[data-dismiss]")) { celebrate = null; whammy = null; clearTimeout(celebrateTimer); clearTimeout(whammyTimer); render(); } });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && (celebrate || whammy)) { celebrate = null; whammy = null; clearTimeout(celebrateTimer); clearTimeout(whammyTimer); render(); } });
+    render();
+    return;
+  }
 
   // ---------- events ----------
   function act(fn) { fn(); persist(); publish(); render(); }
@@ -1273,7 +1428,7 @@
         if (!confirmNew) { confirmNew = true; render(); break; }
         confirmNew = false; overlay = null;
         draft = Object.assign({}, draft, S.cfg, { names: S.teams.map(t => t.name) });
-        S = null; lastPub = ""; persist(); render(); break;
+        S = null; lastPub = ""; lastWatch = ""; persist(); render(); break;
     }
   });
 

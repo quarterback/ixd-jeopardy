@@ -4,6 +4,7 @@
   One room per game. Keys in the store:
     r/CODE/meta     { hostKey, n, createdAt }      private to the server
     r/CODE/state    what the host screen publishes; team devices read it
+    r/CODE/watch    the host screen for watchers at /watch; answers only after the reveal
     r/CODE/t/I      one doc per team: { token, dbl, subs: { [qid]: { pick, at, wager, stop, aim } } }
 
   Only the host (holding hostKey) can change the state. Each team doc is
@@ -95,6 +96,19 @@ export async function handle(req, store) {
       const docs = await Promise.all(Array.from({ length: meta.n }, (_, i) => store.get(teamKey(i))));
       const teams = docs.map(d => ({ claimed: !!(d && d.token), dbl: d ? d.dbl : null, sub: (d && qid && d.subs[qid]) || null }));
       return json({ teams, now });
+    }
+
+    // Watchers read what the host's screen shows, with no answers before the reveal
+    if (action === "watch" && req.method === "GET") {
+      const watch = await store.get(`r/${code}/watch`);
+      return json({ watch: watch || null, now });
+    }
+    if (action === "watch" && req.method === "PUT") {
+      if (!isHost) return err(403, "not_host", "Only the host can do that.");
+      const b = await body(req);
+      if (!b.watch || typeof b.watch !== "object") return err(400, "bad_watch", "Nothing to show.");
+      await store.set(`r/${code}/watch`, b.watch);
+      return json({ ok: true, now });
     }
 
     // Host frees a team so another device can join as it

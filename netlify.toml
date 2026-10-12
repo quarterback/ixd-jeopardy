@@ -11,3 +11,8 @@
   from = "/play"
   to = "/play.html"
   status = 200
+
+[[redirects]]
+  from = "/watch"
+  to = "/watch.html"
+  status = 200
