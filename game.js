@@ -98,7 +98,7 @@
   // ---------- state ----------
   let S = load();
   if (S && !S.cfg) S = null;
-  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 6, rows: 2, secs: 30, mode: "devices", final: true };
+  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 4, secs: 25, mode: "devices", final: true };
   if (S) draft = Object.assign({}, draft, S.cfg, { names: S.teams.map(t => t.name) });
   let overlay = null, confirmNew = false, setupError = "", starting = false;
   const buzzed = {};
@@ -362,7 +362,7 @@
                 <option value="dm" ${draft.mode === "dm" ? "selected" : ""}>DM to me, I click it in</option></select></div>
               ${field("rounds", "Rounds", [1, 2, 3], draft.rounds, v => v + (v === 1 ? " board" : " boards"))}
               ${field("cats", "Categories per board", [4, 5, 6], draft.cats, v => v)}
-              ${field("rows", "Questions per category", [2, 3, 4, 5], draft.rows, v => v)}
+              ${field("rows", "Questions per category", [3, 4, 5], draft.rows, v => v)}
               ${field("secs", "Answer clock", [15, 20, 25, 30, 45, 60], draft.secs, v => v + " seconds")}
               ${onOff("final", "Final wager", draft.final, "On", "Off")}
             </div>
