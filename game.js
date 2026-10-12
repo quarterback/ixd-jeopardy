@@ -12,6 +12,14 @@
   const ROLL_BASE = [100, 250, 500, 150, 300, 750, 200, 400, 1000, 100, 350, 500, 200, 600, 250, 800];
   // Where each of those squares sits on a 5 by 5 grid, going clockwise from the top left.
   const RING = [[1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [2, 5], [3, 5], [4, 5], [5, 5], [5, 4], [5, 3], [5, 2], [5, 1], [4, 1], [3, 1], [2, 1]];
+  // The wheel: 24 wedges, one top wedge (index 15). Every wedge pays something.
+  const WHEEL_BASE = [300, 500, 250, 700, 400, 850, 350, 600, 200, 800, 450, 500, 300, 650, 250, 1000, 400, 550, 150, 750, 350, 600, 250, 900];
+  const WHEEL_TOP = 15;
+  const WHEEL_COLORS = ["#e0544a", "#2f7de1", "#f2b632", "#2fbf71", "#a77bf0", "#f08a4b", "#1fb5c4", "#e05aa0"];
+  // Plinko: 9 slots mirrored from the middle. The middle pays most; the slots beside it pay least.
+  const PLINKO_BASE = [200, 300, 500, 100, 1000, 100, 500, 300, 200];
+  const PLINKO_AIMS = [0, 2, 4, 6, 8]; // which slot each of the five drop spots sits above
+  const PLINKO_ROWS = 8;
   const app = document.getElementById("app");
 
   // ---------- storage ----------
@@ -193,12 +201,17 @@
     const n = S.cfg.cats * S.cfg.rows, k = specDone(ri).length;
     return squaresDone(ri) >= Math.max(1, Math.round((k + 1) * n / (S.teams.length + 1)));
   }
+  // Round one rolls the light board. Round two rolls a wheel or Plinko. Round three can be any of them.
+  function rollTypeFor(ri) {
+    const opts = ri === 0 ? ["board"] : ri === 1 ? ["wheel", "plinko"] : ["board", "wheel", "plinko"];
+    return opts[Math.floor(Math.random() * opts.length)];
+  }
   function startSpecial(team) {
     S.specCount = S.specCount || {};
     const n = S.specCount[S.ri] = (S.specCount[S.ri] || 0) + 1;
     const key = `${S.ri}-s-${n}`;
     S.specials = S.specials || {};
-    S.specials[key] = { bonus: true, team, value: 0, q: drawSpecialQ() };
+    S.specials[key] = { bonus: true, team, value: 0, roll: rollTypeFor(S.ri), q: drawSpecialQ() };
     S.cur = key; S.view = "question"; res(key);
   }
 
@@ -212,7 +225,7 @@
     const cell = cellAt(S.cur), r = res(S.cur), q = cell.q;
     const kind = cell.bonus ? "special" : cell.final ? "final" : cell.dd ? "dd" : "q";
     const common = { qid: qid(S.cur), kind, cat: q.cat, value: cell.value || 0, visual: !!q.media, onlyTeam: cell.bonus ? cell.team : null };
-    if (cell.bonus && !r.rolled) return Object.assign(base, common, { phase: "roll" });
+    if (cell.bonus && !r.rolled) return Object.assign(base, common, { phase: "roll", rollType: cell.roll || "board" });
     if (isWager(cell) && !r.shown) return Object.assign(base, common, { phase: "splash", maxWager: S.teams.map((_, t) => maxWager(t, S.cur)) });
     if (!r.revealed) return Object.assign(base, common, { phase: "question", secs: S.cfg.secs, startedAt: r.startedAt, deadline: r.deadline, options: r.startedAt ? q.options : null });
     return Object.assign(base, common, {
@@ -244,7 +257,7 @@
       const r = res(S.cur), id = qid(S.cur), cell = cellAt(S.cur);
       if (cell.bonus && !r.rolled) {
         const s = (teams[cell.team] && teams[cell.team].sub) || {};
-        if (s.stop != null) stopRoll();
+        if (s.stop != null) stopRoll(s.aim);
       } else if (!r.revealed) {
         teams.forEach((x, t) => {
           if (cell.bonus && t !== cell.team) return;
@@ -261,14 +274,16 @@
   setInterval(poll, 1000);
 
   // ---------- the Special roll ----------
-  let roll = null; // { key, lit, timer, stopping }
-  function rollValue(i) { return ROLL_BASE[i] * (S.ri + 1); }
+  let roll = null; // { key, type, lit, timer, stopping, rot }
+  function mult() { return S.ri + 1; }
+  function rollType(cell) { return cell.roll || "board"; }
   function ensureRolling() {
     if (!S || S.view !== "question" || !S.cur) return;
     const cell = cellAt(S.cur), r = res(S.cur);
     if (!cell.bonus || r.rolled) { if (roll && roll.timer) clearTimeout(roll.timer); roll = null; return; }
     if (roll && roll.key === S.cur) { paintRoll(); return; }
-    roll = { key: S.cur, lit: Math.floor(Math.random() * 16), timer: null, stopping: false };
+    roll = { key: S.cur, type: rollType(cell), lit: Math.floor(Math.random() * 16), timer: null, stopping: false, rot: 0 };
+    if (roll.type !== "board") return;
     const step = () => {
       if (!roll || roll.stopping) return;
       roll.lit = nextLit(roll.lit); paintRoll();
@@ -278,26 +293,81 @@
   }
   function nextLit(cur) { let n; do { n = Math.floor(Math.random() * 16); } while (n === cur); return n; }
   function paintRoll() {
-    if (!roll) return;
+    if (!roll || roll.type !== "board") return;
     document.querySelectorAll(".rcell").forEach(el => el.classList.toggle("lit", Number(el.dataset.i) === roll.lit));
   }
-  function stopRoll() {
+  function stopRoll(aim) {
     if (!roll || roll.stopping || roll.key !== S.cur) return;
     roll.stopping = true;
+    if (roll.type === "wheel") return spinWheel();
+    if (roll.type === "plinko") return dropChip(Number.isInteger(aim) ? aim : 2);
     clearTimeout(roll.timer);
     const delays = [140, 190, 250, 330, 430, 560];
     let i = 0;
     const slow = () => {
       if (!roll) return;
       if (i < delays.length) { roll.lit = nextLit(roll.lit); paintRoll(); setTimeout(slow, delays[i++]); return; }
-      const cell = cellAt(roll.key), r = res(roll.key);
-      cell.value = rollValue(roll.lit);
       document.querySelectorAll(".rcell.lit").forEach(el => el.classList.add("landed"));
-      const center = document.getElementById("rollcenter");
-      if (center) center.innerHTML = `<p class="roll-title">Playing for</p><p class="roll-amount">${fmt(cell.value)}</p>`;
-      setTimeout(() => { r.rolled = true; r.shown = true; roll = null; persist(); publish(); render(); }, 1400);
+      land(ROLL_BASE[roll.lit] * mult());
     };
     slow();
+  }
+  // Shows the amount for a moment, then moves on to the question.
+  function land(value) {
+    const key = roll.key, cell = cellAt(key), r = res(key);
+    cell.value = value;
+    const center = document.getElementById("rollcenter");
+    if (center) center.innerHTML = `<p class="roll-title">Playing for</p><p class="roll-amount">${fmt(value)}</p>`;
+    setTimeout(() => { r.rolled = true; r.shown = true; roll = null; persist(); publish(); render(); }, 1600);
+  }
+  function spinWheel() {
+    const w = Math.floor(Math.random() * WHEEL_BASE.length);
+    const jitter = Math.random() * 9 - 4.5;
+    const turns = 5 + Math.floor(Math.random() * 2);
+    const target = turns * 360 - w * 15 + jitter;
+    const el = document.getElementById("wheelspin");
+    if (el) {
+      el.style.transition = "transform 5.6s cubic-bezier(0.12, 0.62, 0.08, 1)";
+      requestAnimationFrame(() => { el.style.transform = `rotate(${target}deg)`; });
+    }
+    setTimeout(() => {
+      const wedge = document.querySelector(`.wedge[data-i="${w}"]`);
+      if (wedge) wedge.classList.add("landed");
+      land(WHEEL_BASE[w] * mult());
+    }, el ? 5800 : 0);
+  }
+  function plinkoX(p) { return 30 + 30 * p; }
+  function dropChip(aim) {
+    let p = PLINKO_AIMS[Math.max(0, Math.min(4, aim))] * 2;
+    const pts = [[plinkoX(p), 18]];
+    for (let j = 0; j < PLINKO_ROWS; j++) {
+      p += Math.random() < 0.5 ? -1 : 1;
+      if (p < 0) p = 1;
+      if (p > 16) p = 15;
+      pts.push([plinkoX(p), 90 + j * 55]);
+    }
+    const slot = p / 2;
+    pts.push([plinkoX(p), 548]);
+    const chip = document.getElementById("chip");
+    const seg = 330;
+    const t0 = performance.now();
+    const frame = now => {
+      const t = Math.max(0, (now - t0) / seg);
+      const i = Math.min(pts.length - 2, Math.floor(t));
+      const f = Math.min(1, t - i);
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+      const x = x0 + (x1 - x0) * f;
+      const y = y0 + (y1 - y0) * f - Math.sin(Math.PI * f) * 16; // a small hop off each peg
+      if (chip) { chip.setAttribute("cx", x); chip.setAttribute("cy", y); }
+      if (t < pts.length - 1) requestAnimationFrame(frame);
+      else {
+        const el = document.querySelector(`.pslot[data-i="${slot}"]`);
+        if (el) el.classList.add("landed");
+        land(PLINKO_BASE[slot] * mult());
+      }
+    };
+    if (chip) requestAnimationFrame(frame);
+    else land(PLINKO_BASE[slot] * mult());
   }
 
   // ---------- clock ----------
@@ -564,16 +634,67 @@
     </section>`;
   }
 
+  function rollInfo(cell, verb) {
+    const name = esc(S.teams[cell.team].name);
+    const hint = live() ? `${name}, ${verb} on your device` : "Tell me when!";
+    return `<div class="roll-center" id="rollcenter">
+          <p class="roll-title">Special</p>
+          <p class="roll-team">${name}</p>
+          <p class="roll-hint">${hint}</p>
+        </div>`;
+  }
   function viewRoll(cell) {
-    const hint = live() ? `${esc(S.teams[cell.team].name)}, press Stop on your device` : "Shout stop!";
+    const type = rollType(cell);
+    if (type === "wheel") return viewWheel(cell);
+    if (type === "plinko") return viewPlinko(cell);
     return `<section class="stage roll-stage">
       <div class="rollboard">
-        ${ROLL_BASE.map((v, i) => `<div class="rcell" data-i="${i}" style="grid-row:${RING[i][0]};grid-column:${RING[i][1]}">${fmt(v * (S.ri + 1))}</div>`).join("")}
-        <div class="roll-center" id="rollcenter">
-          <p class="roll-title">Special</p>
-          <p class="roll-team">${esc(S.teams[cell.team].name)}</p>
-          <p class="roll-hint">${hint}</p>
-        </div>
+        ${ROLL_BASE.map((v, i) => `<div class="rcell" data-i="${i}" style="grid-row:${RING[i][0]};grid-column:${RING[i][1]}">${fmt(v * mult())}</div>`).join("")}
+        ${rollInfo(cell, "press Stop")}
+      </div>
+    </section>`;
+  }
+  function viewWheel(cell) {
+    const R = 230, n = WHEEL_BASE.length, step = 360 / n;
+    const pt = deg => { const a = (deg - 90) * Math.PI / 180; return [(R * Math.cos(a)).toFixed(2), (R * Math.sin(a)).toFixed(2)]; };
+    const wedges = WHEEL_BASE.map((v, i) => {
+      const [x0, y0] = pt(i * step - step / 2), [x1, y1] = pt(i * step + step / 2);
+      const top = i === WHEEL_TOP;
+      const fill = top ? "#f4f6ff" : WHEEL_COLORS[i % WHEEL_COLORS.length];
+      const ink = top || fill === "#f2b632" ? "#1b1f33" : "#ffffff";
+      return `<g class="wedge" data-i="${i}"><path d="M0 0 L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z" fill="${fill}" stroke="#0a1238" stroke-width="2"/>
+        <text transform="rotate(${i * step}) translate(0 -${R - 62}) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="${top ? 26 : 23}" fill="${ink}">${fmt(v * mult())}</text></g>`;
+    }).join("");
+    const bulbs = Array.from({ length: 24 }, (_, i) => { const a = (i * 15 - 90) * Math.PI / 180; return `<circle class="bulb" cx="${(R + 14) * Math.cos(a)}" cy="${(R + 14) * Math.sin(a)}" r="4.5" style="animation-delay:${(i % 2) * 0.35}s"/>`; }).join("");
+    return `<section class="stage roll-stage">
+      <div class="wheel-wrap">
+        <svg class="wheel" viewBox="-262 -275 524 540" role="img" aria-label="Prize wheel">
+          <circle r="${R + 22}" fill="#0a1238" stroke="#f2b632" stroke-width="6"/>
+          ${bulbs}
+          <g id="wheelspin" class="wheelspin">${wedges}<circle r="46" fill="#0a1238" stroke="#f2b632" stroke-width="5"/><text text-anchor="middle" dominant-baseline="central" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="24" fill="#f2b632">SPIN</text></g>
+          <path d="M-20 -270 L20 -270 L0 -224 Z" fill="#f2b632" stroke="#0a1238" stroke-width="3"/>
+        </svg>
+        ${rollInfo(cell, "tap Spin")}
+      </div>
+    </section>`;
+  }
+  function viewPlinko(cell) {
+    let pegs = "";
+    for (let j = 0; j < PLINKO_ROWS; j++) {
+      const y = 90 + j * 55 + 22;
+      for (let m = 0; m <= 18; m++) if ((m + j) % 2 === 0 && m > 0 && m < 18) pegs += `<circle cx="${m * 30}" cy="${y}" r="5" fill="#c9d1f5"/>`;
+    }
+    const slots = PLINKO_BASE.map((v, i) => `<g class="pslot ${i === 4 ? "top" : ""}" data-i="${i}"><rect x="${i * 60 + 2}" y="520" width="56" height="78" rx="6"/><text x="${i * 60 + 30}" y="566" text-anchor="middle" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="${v * mult() >= 1000 ? 19 : 22}">${fmt(v * mult())}</text></g>`).join("");
+    const aims = PLINKO_AIMS.map((s, a) => `<g class="paim" data-aim="${a}"><path d="M${30 + 60 * s - 14} 2 L${30 + 60 * s + 14} 2 L${30 + 60 * s} 20 Z"/></g>`).join("");
+    const walls = Array.from({ length: 8 }, (_, i) => `<rect x="${(i + 1) * 60 - 2}" y="500" width="4" height="98" fill="#2e3f99"/>`).join("");
+    return `<section class="stage roll-stage">
+      <div class="wheel-wrap">
+        <svg class="plinko" viewBox="-6 -4 552 606" role="img" aria-label="Plinko board">
+          <rect x="-6" y="-4" width="552" height="606" rx="14" fill="#0e1a52" stroke="#2e3f99" stroke-width="3"/>
+          ${pegs}${walls}${slots}${aims}
+          <circle id="chip" cx="${plinkoX(8)}" cy="-40" r="16" fill="#f2b632" stroke="#8a5d00" stroke-width="4"/>
+        </svg>
+        ${rollInfo(cell, "pick a spot to drop")}
       </div>
     </section>`;
   }
@@ -728,7 +849,7 @@
       const done = specDone(S.ri);
       return `<footer class="hostbar">
         <button class="btn" data-act="board">Back without playing<kbd>B</kbd></button>
-        <button class="btn primary" data-act="main">Stop<kbd>Space</kbd></button>
+        <button class="btn primary" data-act="main">${{ wheel: "Spin the wheel", plinko: "Drop in the middle" }[rollType(cell)] || "Stop"}<kbd>Space</kbd></button>
         <label class="inline" for="special-team">Give it to
           <select id="special-team">${S.teams.map((tm, t) => `<option value="${t}" ${t === cell.team ? "selected" : ""}>${esc(tm.name)}${done.includes(t) ? " (had one)" : ""}</option>`).join("")}</select>
         </label>
@@ -884,6 +1005,7 @@
 
   function render() {
     if (!S) { app.innerHTML = viewSetup(); return; }
+    if (roll && roll.stopping && S.view === "question" && S.cur === roll.key) return;
     let body = viewTop();
     if (S.view === "lobby") body += viewLobby() + viewHost();
     else if (S.view === "board") body += viewBoard() + viewTeams() + viewHost();
@@ -922,6 +1044,9 @@
 
   app.addEventListener("click", e => {
     if (celebrate && e.target.closest("[data-dismiss]")) { celebrate = null; clearTimeout(celebrateTimer); render(); return; }
+    const aimEl = e.target.closest(".paim");
+    if (aimEl && roll && roll.type === "plinko") { stopRoll(Number(aimEl.dataset.aim)); return; }
+    if (e.target.closest(".wheel") && roll && roll.type === "wheel") { stopRoll(); return; }
     const b = e.target.closest("button, [data-close]");
     if (!b) return;
     if (b.hasAttribute("data-close") && b === e.target) { overlay = null; confirmNew = false; render(); return; }

@@ -96,9 +96,9 @@
     catch (e) { note = e.message; }
     busy = false; render(true);
   }
-  async function sendStop() {
+  async function sendStop(aim) {
     if (busy) return; busy = true; stopped = state.qid;
-    try { await api("POST", "/stop", { team: me.team, token: me.token, qid: state.qid }); note = ""; }
+    try { await api("POST", "/stop", { team: me.team, token: me.token, qid: state.qid, aim }); note = ""; }
     catch (e) { note = e.message; stopped = null; }
     busy = false; render(true);
   }
@@ -158,8 +158,10 @@
     const ownerName = owner == null ? "" : esc(s.teams[owner] || "");
 
     if (s.phase === "roll") {
-      if (owner !== t) return viewWaiting(`${ownerName} is rolling a Special`, "Watch the board on the main screen.");
-      if (sub.stop != null || stopped === s.qid) return viewWaiting("Stopped", "Watch the board to see what you're playing for.");
+      if (owner !== t) return viewWaiting(`${ownerName} is ${s.rollType === "wheel" ? "spinning the wheel" : s.rollType === "plinko" ? "dropping a Plinko chip" : "rolling"} for a Special`, "Watch the main screen.");
+      if (sub.stop != null || stopped === s.qid) return viewWaiting(s.rollType === "wheel" ? "Spinning" : s.rollType === "plinko" ? "Dropped" : "Stopped", "Watch the main screen to see what you're playing for.");
+      if (s.rollType === "wheel") return `<section class="p-card center"><h1 class="p-title">Your Special</h1><p class="p-sub">Spin the wheel and watch it on the main screen.</p><button class="p-btn primary huge" data-act="stop" ${busy ? "disabled" : ""}>Spin</button></section>`;
+      if (s.rollType === "plinko") return `<section class="p-card center"><h1 class="p-title">Your Special</h1><p class="p-sub">Pick where to drop your chip, then watch it on the main screen.</p><div class="p-aims">${["Far left", "Left", "Middle", "Right", "Far right"].map((n, a) => `<button class="p-btn" data-aim="${a}" ${busy ? "disabled" : ""}><b>${a + 1}</b>${n}</button>`).join("")}</div></section>`;
       return `<section class="p-card center"><h1 class="p-title">Your Special</h1><p class="p-sub">Watch the board on the main screen and stop it when you like.</p><button class="p-btn primary huge" data-act="stop" ${busy ? "disabled" : ""}>Stop</button></section>`;
     }
     if (owner != null && owner !== t) {
@@ -264,6 +266,7 @@
     else if (d.wq != null) { wagerDraft = d.wq; render(true); }
     else if (d.act === "lock") lockAnswer();
     else if (d.act === "stop") sendStop();
+    else if (d.aim != null) sendStop(Number(d.aim));
     else if (d.act === "double") setDouble(!(mine && mine.dbl === state.qid));
     else if (d.act === "refresh") loadRoom();
   });

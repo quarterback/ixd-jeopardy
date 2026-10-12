@@ -469,3 +469,27 @@ button { cursor: pointer; }
 }
 .p-btn.huge { min-height: 140px; width: 100%; font-family: var(--display); font-weight: 900; font-size: 64px; text-transform: uppercase; }
 @media (max-height: 780px) { .rollboard { height: min(58vh, 460px); } }
+
+/* ---------- wheel and Plinko Specials ---------- */
+.wheel-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 28px; align-items: center; width: min(100%, 1100px); }
+.wheel-wrap .roll-center { grid-row: auto; grid-column: auto; min-height: 260px; }
+.wheel, .plinko { width: 100%; height: auto; max-height: 62vh; display: block; }
+.wheel { cursor: pointer; }
+.wheelspin { transform-box: fill-box; transform-origin: center; }
+.bulb { fill: #fff3c4; animation: bulb 0.7s steps(1) infinite; }
+@keyframes bulb { 50% { fill: #5a4100; } }
+.wedge.landed path { stroke: #fff; stroke-width: 6; }
+.pslot rect { fill: #16246a; stroke: #2e3f99; stroke-width: 2; }
+.pslot text { fill: #eef1ff; }
+.pslot.top rect { fill: #5a4100; stroke: #f2b632; }
+.pslot.top text { fill: #f2b632; }
+.pslot.landed rect { fill: #f2b632; stroke: #fff3c4; }
+.pslot.landed text { fill: #241800; }
+.paim { cursor: pointer; }
+.paim path { fill: #f2b632; opacity: 0.85; }
+.paim:hover path { opacity: 1; }
+.p-aims { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.p-aims .p-btn { padding: 10px 2px; font-size: 14px; min-height: 90px; display: grid; place-items: center; gap: 4px; }
+.p-aims .p-btn b { font-family: var(--display); font-size: 30px; color: var(--gold); line-height: 1; }
+@media (prefers-reduced-motion: reduce) { .bulb { animation: none; } }
+@media (max-width: 760px) { .wheel-wrap { grid-template-columns: minmax(0, 1fr); } }

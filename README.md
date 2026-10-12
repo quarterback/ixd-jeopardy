@@ -39,7 +39,10 @@ Each round, every team gets one Special: a bonus question only that team answers
 
 * The game spaces Specials evenly through the round. When one is due, the board shows **Special for (team)** with a **Roll it** button. **Roll a Special** in the bottom bar starts the next one any time.
 * Specials go in reverse team order. The last team gets the first Special of every round, and every round starts the order again.
-* Rolling opens a board of 16 point values with a light jumping between them. The team presses **Stop** on its device, or you press **Space**. The square it lands on is what they play for. Values double in Double Jeopardy and triple in Triple Jeopardy.
+* How the amount gets picked changes by round. Values double in Double Jeopardy and triple in Triple Jeopardy.
+  * **Jeopardy:** a board of 16 point values with a light jumping between them. The team presses **Stop** on its device, or you press **Space**.
+  * **Double Jeopardy:** each Special is randomly a **wheel** or **Plinko**. On the wheel, the team taps **Spin** and the pointer at the top picks one of 24 wedges, with one top wedge. On Plinko, the team picks one of five drop spots and the chip bounces down into one of 9 slots; the middle pays most and the slots beside it pay least. Every wedge and slot pays something. You can spin with **Space**, or drop from any spot by clicking the arrows above the board.
+  * **Triple Jeopardy:** any of the three.
 * The question comes from any category and is never one already used in the game. Other teams sit it out.
 * A right answer earns the team the amount, and characters bring the money. A wrong answer costs nothing; the characters laugh, and that's it.
 * While it's rolling you can **Give it to** another team or **Skip this team**. Before the reveal, **New question** swaps in a different question and keeps the amount. **Back without playing** leaves the team's Special for later.
@@ -66,7 +69,7 @@ Each round, every team gets one Special: a bonus question only that team answers
 
 | Key | Does |
 | --- | --- |
-| Space | Start the clock, or stop a Special roll |
+| Space | Start the clock, or stop, spin or drop a Special |
 | R or Enter | Show the question, reveal, or hide the answer |
 | B | Back to the board |
 | S | Scoreboard |
