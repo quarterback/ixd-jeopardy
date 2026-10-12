@@ -17,6 +17,7 @@
   let note = "";           // a short message under the main content
   let busy = false;
   let lastShape = "";
+  let stopped = null;      // the Special this device already pressed Stop on
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   function fmt(n) { n = Number(n) || 0; return (n < 0 ? "−" : "") + Math.abs(n).toLocaleString("en-US"); }
@@ -95,6 +96,12 @@
     catch (e) { note = e.message; }
     busy = false; render(true);
   }
+  async function sendStop() {
+    if (busy) return; busy = true; stopped = state.qid;
+    try { await api("POST", "/stop", { team: me.team, token: me.token, qid: state.qid }); note = ""; }
+    catch (e) { note = e.message; stopped = null; }
+    busy = false; render(true);
+  }
   async function setDouble(on) {
     if (busy) return; busy = true;
     try { const d = await api("POST", "/double", { team: me.team, token: me.token, qid: state.qid, on }); mine = Object.assign({}, mine, { dbl: d.dbl }); note = ""; }
@@ -145,8 +152,24 @@
     }
     if (s.phase === "end") return viewWaiting(placeOf(t) === 1 ? "You won" : `You finished ${ordinal(placeOf(t))}`, `Final score ${fmt(s.scores[t])}.`);
 
-    const label = s.kind === "final" ? "Final wager" : s.kind === "dd" ? "Daily Double" : `${esc(s.cat)} · ${fmt(s.value)}`;
+    const label = s.kind === "final" ? "Final Jeopardy" : s.kind === "dd" ? "Daily Double" : s.kind === "special" ? `Special · ${fmt(s.value)}` : `${esc(s.cat)} · ${fmt(s.value)}`;
     const sub = mine && mine.sub ? mine.sub : {};
+    const owner = s.onlyTeam == null ? null : Number(s.onlyTeam);
+    const ownerName = owner == null ? "" : esc(s.teams[owner] || "");
+
+    if (s.phase === "roll") {
+      if (owner !== t) return viewWaiting(`${ownerName} is rolling a Special`, "Watch the board on the main screen.");
+      if (sub.stop != null || stopped === s.qid) return viewWaiting("Stopped", "Watch the board to see what you're playing for.");
+      return `<section class="p-card center"><h1 class="p-title">Your Special</h1><p class="p-sub">Watch the board on the main screen and stop it when you like.</p><button class="p-btn primary huge" data-act="stop" ${busy ? "disabled" : ""}>Stop</button></section>`;
+    }
+    if (owner != null && owner !== t) {
+      if (s.phase === "reveal") {
+        const r = (s.results || [])[owner] || {};
+        const got = r.pick != null && r.pick === s.answer;
+        return viewWaiting(`${ownerName} ${got ? `won ${fmt(s.value)}` : "missed their Special"}`, `Answer: ${LETTERS[s.answer]}. ${esc(s.options[s.answer])}`);
+      }
+      return viewWaiting(`${ownerName}'s Special`, `They're playing for ${fmt(s.value)}. Only they answer this one.`);
+    }
 
     if (s.phase === "splash") {
       const max = (s.maxWager || [])[t] || 0;
@@ -240,6 +263,7 @@
     else if (d.pick != null) { picked = Number(d.pick); render(true); }
     else if (d.wq != null) { wagerDraft = d.wq; render(true); }
     else if (d.act === "lock") lockAnswer();
+    else if (d.act === "stop") sendStop();
     else if (d.act === "double") setDouble(!(mine && mine.dbl === state.qid));
     else if (d.act === "refresh") loadRoom();
   });

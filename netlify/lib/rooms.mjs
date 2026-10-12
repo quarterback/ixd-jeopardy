@@ -4,7 +4,7 @@
   One room per game. Keys in the store:
     r/CODE/meta     { hostKey, n, createdAt }      private to the server
     r/CODE/state    what the host screen publishes; team devices read it
-    r/CODE/t/I      one doc per team: { token, dbl, subs: { [qid]: { pick, at, wager } } }
+    r/CODE/t/I      one doc per team: { token, dbl, subs: { [qid]: { pick, at, wager, stop } } }
 
   Only the host (holding hostKey) can change the state. Each team doc is
   written only by the device that claimed that team, so writes don't collide.
@@ -126,6 +126,17 @@ export async function handle(req, store) {
     const qid = String(b.qid || "");
     if (!state || state.qid !== qid) return err(409, "closed", "That question is closed.");
     const sub = doc.subs[qid] || {};
+
+    const onlyTeam = state.onlyTeam == null ? null : Number(state.onlyTeam);
+    if (onlyTeam != null && onlyTeam !== t) return err(409, "not_yours", "This Special belongs to another team.");
+
+    if (action === "stop" && req.method === "POST") {
+      if (state.phase !== "roll") return err(409, "closed", "The board isn't rolling.");
+      if (sub.stop != null) return json({ ok: true });
+      doc.subs[qid] = Object.assign(sub, { stop: now });
+      await store.set(teamKey(t), doc);
+      return json({ ok: true });
+    }
 
     if (action === "answer" && req.method === "POST") {
       if (state.phase !== "question" || !state.startedAt) return err(409, "closed", "Answers aren't open.");

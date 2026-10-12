@@ -1,12 +1,17 @@
 /* Design Jeopardy host screen.
    Two ways to play:
    "devices"  each team answers on its own phone or laptop at /play. This screen only shows who has locked in.
-   "dm"       captains DM the host, who clicks answers in. No server needed. */
+   "dm"       captains DM the host, who clicks answers in. No server needed.
+   Each round, every team also gets one Special: a Press Your Luck style roll, then a question only that team answers. */
 (function () {
   "use strict";
 
   const STORE = "design-jeopardy-v3";
   const LETTERS = ["A", "B", "C", "D"];
+  // The 16 squares around the Special board, in round one points. Later rounds multiply them.
+  const ROLL_BASE = [100, 250, 500, 150, 300, 750, 200, 400, 1000, 100, 350, 500, 200, 600, 250, 800];
+  // Where each of those squares sits on a 5 by 5 grid, going clockwise from the top left.
+  const RING = [[1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [2, 5], [3, 5], [4, 5], [5, 5], [5, 4], [5, 3], [5, 2], [5, 1], [4, 1], [3, 1], [2, 1]];
   const app = document.getElementById("app");
 
   // ---------- storage ----------
@@ -86,33 +91,47 @@
         const d = shuffle(DAILY_DOUBLES.filter(x => !usedDD.has(x.q)))[0];
         usedDD.add(d.q);
         const cell = cols[spots[i].c].cells[spots[i].k];
+        used.delete(cell.q.q);
         cell.dd = true;
         cell.q = prep(d, d.cat);
       }
       rounds.push({ cols });
     }
     const final = cfg.final && FINALS.length ? { value: 0, dd: false, final: true, q: prep(shuffle(FINALS)[0]) } : null;
-    return { rounds, final };
+    return { rounds, final, used: Array.from(used) };
+  }
+  // A Special question: any category, never a question already on a board or used for another Special.
+  function drawSpecialQ() {
+    const used = new Set(S.usedQ || []);
+    let pool = [];
+    BANK.forEach(cat => cat.qs.forEach(q => { if (!used.has(q.q)) pool.push({ q, cat: cat.cat }); }));
+    if (!pool.length) BANK.forEach(cat => cat.qs.forEach(q => pool.push({ q, cat: cat.cat })));
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    S.usedQ = (S.usedQ || []).concat(pick.q.q);
+    return prep(pick.q, pick.cat);
   }
 
   // ---------- state ----------
   let S = load();
   if (S && !S.cfg) S = null;
-  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 4, secs: 25, mode: "devices", final: true };
+  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 5, secs: 25, mode: "devices", final: true, specials: true };
   if (S) draft = Object.assign({}, draft, S.cfg, { names: S.teams.map(t => t.name) });
   let overlay = null, confirmNew = false, setupError = "", starting = false;
+  let celebrate = null, celebrateTimer = null;
   const buzzed = {};
 
+  function isBonusKey(key) { return /^\d+-s-\d+$/.test(key || ""); }
   function cellAt(key) {
     if (key === "final") return S.final;
+    if (isBonusKey(key)) return S.specials[key];
     const [r, c, k] = key.split("-").map(Number);
     return S.rounds[r].cols[c].cells[k];
   }
-  function isSpecial(cell) { return !!(cell.dd || cell.final); }
+  function isWager(cell) { return !!(cell.dd || cell.final); }
   function res(key) {
     if (!S.res[key]) {
       const cell = cellAt(key);
-      S.res[key] = { picks: {}, at: {}, wagers: {}, doubled: [], shown: !isSpecial(cell), revealed: false, done: false, startedAt: null, deadline: null };
+      S.res[key] = { picks: {}, at: {}, wagers: {}, doubled: [], shown: !isWager(cell) && !cell.bonus, rolled: !cell.bonus, revealed: false, done: false, startedAt: null, deadline: null };
     }
     return S.res[key];
   }
@@ -121,8 +140,10 @@
     const r = S.res[key];
     if (!r || !r.revealed) return 0;
     const cell = cellAt(key);
+    if (!cell) return 0;
     const pick = r.picks[t];
-    if (isSpecial(cell)) {
+    if (cell.bonus) return t === cell.team && pick === cell.q.answer ? cell.value : 0;
+    if (isWager(cell)) {
       const w = Number(r.wagers[t]) || 0;
       if (pick == null) return 0;
       return pick === cell.q.answer ? w : -w;
@@ -146,12 +167,40 @@
     const s = score(t, key);
     return key === "final" ? Math.max(s, 0) : Math.max(s, boardTop(S.ri));
   }
-  function roundDone(ri) {
-    return S.rounds[ri].cols.every((col, c) => col.cells.every((cell, k) => { const r = S.res[`${ri}-${c}-${k}`]; return r && r.done; }));
+  function squaresDone(ri) {
+    let n = 0;
+    S.rounds[ri].cols.forEach((col, c) => col.cells.forEach((cell, k) => { const r = S.res[`${ri}-${c}-${k}`]; if (r && r.done) n++; }));
+    return n;
   }
+  function roundDone(ri) { return squaresDone(ri) === S.cfg.cats * S.cfg.rows; }
   function remaining() { const r = S.cur && S.res[S.cur]; return r && r.deadline ? r.deadline - serverNow() : null; }
   function clockRunning() { const r = S.cur && S.res[S.cur]; return !!(r && r.startedAt && !r.revealed && remaining() > 0); }
   function lockedCount() { const r = S.cur && S.res[S.cur]; return r ? S.teams.filter((_, t) => r.picks[t] != null).length : 0; }
+
+  // ---------- Specials ----------
+  // Reverse team order: the last team gets the first Special of every round.
+  function specialsOn() { return S.cfg.specials !== false; }
+  function specDone(ri) { S.specDone = S.specDone || {}; return (S.specDone[ri] = S.specDone[ri] || []); }
+  function specialsLeft(ri) { return specialsOn() ? S.teams.length - specDone(ri).length : 0; }
+  function nextSpecialTeam(ri) {
+    const done = specDone(ri);
+    for (let t = S.teams.length - 1; t >= 0; t--) if (!done.includes(t)) return t;
+    return null;
+  }
+  // Spread the Specials evenly through the round's squares.
+  function specialDue(ri) {
+    if (!specialsLeft(ri)) return false;
+    const n = S.cfg.cats * S.cfg.rows, k = specDone(ri).length;
+    return squaresDone(ri) >= Math.max(1, Math.round((k + 1) * n / (S.teams.length + 1)));
+  }
+  function startSpecial(team) {
+    S.specCount = S.specCount || {};
+    const n = S.specCount[S.ri] = (S.specCount[S.ri] || 0) + 1;
+    const key = `${S.ri}-s-${n}`;
+    S.specials = S.specials || {};
+    S.specials[key] = { bonus: true, team, value: 0, q: drawSpecialQ() };
+    S.cur = key; S.view = "question"; res(key);
+  }
 
   // What team devices are allowed to see. The question text never goes to devices.
   function pubState() {
@@ -161,15 +210,11 @@
     if (S.view === "results") return Object.assign(base, { phase: "results", roundPts: S.teams.map((_, t) => roundPoints(t, S.ri)) });
     if (S.view === "end") return Object.assign(base, { phase: "end" });
     const cell = cellAt(S.cur), r = res(S.cur), q = cell.q;
-    const kind = cell.final ? "final" : cell.dd ? "dd" : "q";
-    const common = { qid: qid(S.cur), kind, cat: q.cat, value: cell.value || 0, visual: !!q.media };
-    if (isSpecial(cell) && !r.shown) return Object.assign(base, common, { phase: "splash", maxWager: S.teams.map((_, t) => maxWager(t, S.cur)) });
-    if (!r.revealed) {
-      return Object.assign(base, common, {
-        phase: "question", secs: S.cfg.secs, startedAt: r.startedAt, deadline: r.deadline,
-        options: r.startedAt ? q.options : null
-      });
-    }
+    const kind = cell.bonus ? "special" : cell.final ? "final" : cell.dd ? "dd" : "q";
+    const common = { qid: qid(S.cur), kind, cat: q.cat, value: cell.value || 0, visual: !!q.media, onlyTeam: cell.bonus ? cell.team : null };
+    if (cell.bonus && !r.rolled) return Object.assign(base, common, { phase: "roll" });
+    if (isWager(cell) && !r.shown) return Object.assign(base, common, { phase: "splash", maxWager: S.teams.map((_, t) => maxWager(t, S.cur)) });
+    if (!r.revealed) return Object.assign(base, common, { phase: "question", secs: S.cfg.secs, startedAt: r.startedAt, deadline: r.deadline, options: r.startedAt ? q.options : null });
     return Object.assign(base, common, {
       phase: "reveal", options: q.options, answer: q.answer,
       results: S.teams.map((_, t) => ({ pick: r.picks[t] == null ? null : r.picks[t], delta: points(t, S.cur), doubled: r.doubled.includes(t) }))
@@ -196,9 +241,13 @@
     const claims = teams.map(x => x.claimed);
     if (JSON.stringify(claims) !== JSON.stringify(S.claims)) { S.claims = claims; changed = true; }
     if (S.view === "question" && S.cur) {
-      const r = res(S.cur), id = qid(S.cur);
-      if (!r.revealed) {
+      const r = res(S.cur), id = qid(S.cur), cell = cellAt(S.cur);
+      if (cell.bonus && !r.rolled) {
+        const s = (teams[cell.team] && teams[cell.team].sub) || {};
+        if (s.stop != null) stopRoll();
+      } else if (!r.revealed) {
         teams.forEach((x, t) => {
+          if (cell.bonus && t !== cell.team) return;
           const s = x.sub || {};
           if (s.pick != null && r.picks[t] !== s.pick) { r.picks[t] = s.pick; r.at[t] = s.at; changed = true; }
           if (s.wager != null && r.wagers[t] !== s.wager) { r.wagers[t] = s.wager; changed = true; }
@@ -210,6 +259,46 @@
     if (changed) { persist(); publish(); render(); }
   }
   setInterval(poll, 1000);
+
+  // ---------- the Special roll ----------
+  let roll = null; // { key, lit, timer, stopping }
+  function rollValue(i) { return ROLL_BASE[i] * (S.ri + 1); }
+  function ensureRolling() {
+    if (!S || S.view !== "question" || !S.cur) return;
+    const cell = cellAt(S.cur), r = res(S.cur);
+    if (!cell.bonus || r.rolled) { if (roll && roll.timer) clearTimeout(roll.timer); roll = null; return; }
+    if (roll && roll.key === S.cur) { paintRoll(); return; }
+    roll = { key: S.cur, lit: Math.floor(Math.random() * 16), timer: null, stopping: false };
+    const step = () => {
+      if (!roll || roll.stopping) return;
+      roll.lit = nextLit(roll.lit); paintRoll();
+      roll.timer = setTimeout(step, 110);
+    };
+    step();
+  }
+  function nextLit(cur) { let n; do { n = Math.floor(Math.random() * 16); } while (n === cur); return n; }
+  function paintRoll() {
+    if (!roll) return;
+    document.querySelectorAll(".rcell").forEach(el => el.classList.toggle("lit", Number(el.dataset.i) === roll.lit));
+  }
+  function stopRoll() {
+    if (!roll || roll.stopping || roll.key !== S.cur) return;
+    roll.stopping = true;
+    clearTimeout(roll.timer);
+    const delays = [140, 190, 250, 330, 430, 560];
+    let i = 0;
+    const slow = () => {
+      if (!roll) return;
+      if (i < delays.length) { roll.lit = nextLit(roll.lit); paintRoll(); setTimeout(slow, delays[i++]); return; }
+      const cell = cellAt(roll.key), r = res(roll.key);
+      cell.value = rollValue(roll.lit);
+      document.querySelectorAll(".rcell.lit").forEach(el => el.classList.add("landed"));
+      const center = document.getElementById("rollcenter");
+      if (center) center.innerHTML = `<p class="roll-title">Playing for</p><p class="roll-amount">${fmt(cell.value)}</p>`;
+      setTimeout(() => { r.rolled = true; r.shown = true; roll = null; persist(); publish(); render(); }, 1400);
+    };
+    slow();
+  }
 
   // ---------- clock ----------
   setInterval(() => {
@@ -246,7 +335,7 @@
     draft.names = draft.names.map((n, i) => n.trim() || `Team ${i + 1}`);
     const cfg = Object.assign({}, draft);
     const g = drawGame(cfg);
-    const next = { cfg, teams: cfg.names.map(n => ({ name: n, adj: 0, doubleUsed: null })), rounds: g.rounds, final: g.final, ri: 0, view: "board", cur: null, picker: 0, res: {}, attempts: {}, room: null, claims: [] };
+    const next = { cfg, teams: cfg.names.map(n => ({ name: n, adj: 0, doubleUsed: null })), rounds: g.rounds, final: g.final, usedQ: g.used, ri: 0, view: "board", cur: null, picker: 0, res: {}, attempts: {}, specials: {}, specDone: {}, specCount: {}, room: null, claims: [] };
     if (cfg.mode === "devices") {
       starting = true; setupError = ""; render();
       try {
@@ -271,17 +360,37 @@
   function openCell(key) { S.cur = key; S.view = "question"; res(key); }
   function backToBoard() {
     if (!S.cur) return;
-    const r = res(S.cur);
+    const key = S.cur, r = res(key), cell = cellAt(key);
     if (r.revealed) {
-      if (!r.done) { r.done = true; S.picker = (S.picker + 1) % S.teams.length; }
-      if (S.cur === "final") { S.view = "end"; S.cur = null; return; }
+      if (!r.done) {
+        r.done = true;
+        if (cell.bonus) { if (!specDone(S.ri).includes(cell.team)) specDone(S.ri).push(cell.team); }
+        else if (!cell.final) S.picker = (S.picker + 1) % S.teams.length;
+      }
+      if (key === "final") { S.view = "end"; S.cur = null; return; }
+    } else if (cell.bonus) {
+      // Leaving a Special unplayed: the team keeps its Special for later in the round.
+      delete S.res[key]; delete S.specials[key];
     } else {
-      // Leaving without scoring: forget this attempt so the square replays cleanly later.
-      S.teams.forEach(tm => { if (tm.doubleUsed === S.cur) tm.doubleUsed = null; });
-      delete S.res[S.cur];
-      S.attempts[S.cur] = ((S.attempts && S.attempts[S.cur]) || 0) + 1;
+      S.teams.forEach(tm => { if (tm.doubleUsed === key) tm.doubleUsed = null; });
+      delete S.res[key];
+      S.attempts[key] = ((S.attempts && S.attempts[key]) || 0) + 1;
     }
     S.cur = null; S.view = "board";
+  }
+  function skipSpecial() {
+    const key = S.cur, cell = cellAt(key);
+    if (!cell || !cell.bonus) return;
+    if (!specDone(S.ri).includes(cell.team)) specDone(S.ri).push(cell.team);
+    delete S.res[key]; delete S.specials[key];
+    S.cur = null; S.view = "board";
+  }
+  function newSpecialQuestion() {
+    const key = S.cur, cell = cellAt(key), r = res(key);
+    if (!cell || !cell.bonus || r.revealed) return;
+    cell.q = drawSpecialQ();
+    S.attempts[key] = ((S.attempts && S.attempts[key]) || 0) + 1;
+    Object.assign(r, { picks: {}, at: {}, startedAt: null, deadline: null });
   }
   function afterResults() {
     if (S.ri < S.rounds.length - 1) { S.ri++; S.view = "board"; return; }
@@ -291,9 +400,9 @@
   async function startClock() {
     if (!S || S.view !== "question") return;
     const r = res(S.cur);
-    if (!r.shown || r.revealed || r.startedAt) return;
+    if (!r.shown || !r.rolled || r.revealed || r.startedAt) return;
     if (live()) {
-      r.startedAt = -1; // placeholder so the options show in what we send; the server sets the real time
+      r.startedAt = -1; // so the answers go out in this update; the server sets the real time
       const st = pubState();
       r.startedAt = null;
       const d = await queue(async () => {
@@ -311,20 +420,27 @@
   }
   async function mainAction() {
     if (!S || S.view !== "question") return;
-    const r = res(S.cur);
+    const r = res(S.cur), cell = cellAt(S.cur);
+    if (!r.rolled) { stopRoll(); return; }
     if (!r.shown) { r.shown = true; persist(); publish(); render(); return; }
     if (!r.startedAt) { await startClock(); return; }
     if (!r.revealed) {
       if (live()) { try { const d = await api("GET", `/${S.room.code}/subs?qid=${encodeURIComponent(qid(S.cur))}`); applySubs(d.teams); } catch (e) { /* reveal with what we have */ } }
       r.revealed = true;
+      if (cell.bonus) showCelebration(r.picks[cell.team] === cell.q.answer, cell);
     } else {
       r.revealed = false;
     }
     persist(); publish(); render();
   }
+  function showCelebration(win, cell) {
+    clearTimeout(celebrateTimer);
+    celebrate = { win, amount: cell.value, team: S.teams[cell.team].name };
+    celebrateTimer = setTimeout(() => { celebrate = null; render(); }, 5200);
+  }
   function toggleDouble(t) {
-    const r = res(S.cur), team = S.teams[t];
-    if (r.revealed || r.startedAt || isSpecial(cellAt(S.cur))) return;
+    const r = res(S.cur), team = S.teams[t], cell = cellAt(S.cur);
+    if (r.revealed || r.startedAt || isWager(cell) || cell.bonus) return;
     if (team.doubleUsed === S.cur) { team.doubleUsed = null; r.doubled = r.doubled.filter(x => x !== t); return; }
     if (team.doubleUsed) return;
     team.doubleUsed = S.cur; r.doubled.push(t);
@@ -334,10 +450,11 @@
   function field(id, label, opts, val, show) {
     return `<div class="field"><label for="${id}">${label}</label><select id="${id}">${opts.map(o => `<option value="${o}" ${String(o) === String(val) ? "selected" : ""}>${show(o)}</option>`).join("")}</select></div>`;
   }
-  function onOff(id, label, val, on, off, disabled) {
-    return `<div class="field"><label for="${id}">${label}</label><select id="${id}" ${disabled ? "disabled" : ""}><option value="1" ${val ? "selected" : ""}>${on}</option><option value="0" ${val ? "" : "selected"}>${off}</option></select></div>`;
+  function onOff(id, label, val) {
+    return `<div class="field"><label for="${id}">${label}</label><select id="${id}"><option value="1" ${val ? "selected" : ""}>On</option><option value="0" ${val ? "" : "selected"}>Off</option></select></div>`;
   }
   function viewSetup() {
+    const values = r => Array.from({ length: draft.rows }, (_, k) => (k + 1) * 100 * r).join(", ");
     return `
     <section class="setup">
       <h1>Design <span>Jeopardy</span></h1>
@@ -360,13 +477,14 @@
               <div class="field"><label for="mode">Teams answer on</label><select id="mode">
                 <option value="devices" ${draft.mode === "devices" ? "selected" : ""}>Their own phones or laptops</option>
                 <option value="dm" ${draft.mode === "dm" ? "selected" : ""}>DM to me, I click it in</option></select></div>
-              ${field("rounds", "Rounds", [1, 2, 3], draft.rounds, v => v + (v === 1 ? " board" : " boards"))}
+              ${field("rounds", "Rounds", [1, 2, 3], draft.rounds, v => ["Jeopardy only", "Jeopardy and Double Jeopardy", "Add Triple Jeopardy"][v - 1])}
               ${field("cats", "Categories per board", [4, 5, 6], draft.cats, v => v)}
               ${field("rows", "Questions per category", [3, 4, 5], draft.rows, v => v)}
               ${field("secs", "Answer clock", [15, 20, 25, 30, 45, 60], draft.secs, v => v + " seconds")}
-              ${onOff("final", "Final wager", draft.final, "On", "Off")}
+              ${onOff("specials", "Specials, one per team each round", draft.specials !== false)}
+              ${onOff("final", "Final Jeopardy", draft.final)}
             </div>
-            <p class="note">${draft.rounds * draft.cats * draft.rows} squares drawn from ${BANK.reduce((n, c) => n + c.qs.length, 0)} questions, plus Daily Doubles${draft.final ? " and a final wager" : ""}.</p>
+            <p class="note">Round one ${values(1)}.${draft.rounds > 1 ? ` Double Jeopardy ${values(2)}.` : ""}${draft.rounds > 2 ? ` Triple Jeopardy ${values(3)}.` : ""}</p>
           </div>
         </div>
         ${setupError ? `<p class="msg bad">${esc(setupError)}</p>` : ""}
@@ -377,20 +495,21 @@
     </section>`;
   }
 
+  const ROUND_NAMES = ["Jeopardy", "Double Jeopardy", "Triple Jeopardy"];
   function viewTop() {
     let meta = "";
     if (S.view === "lobby") meta = "Join the game";
-    else if (S.view === "board") meta = `Round ${S.ri + 1} of ${S.rounds.length}`;
-    else if (S.view === "results") meta = `Round ${S.ri + 1} of ${S.rounds.length}`;
+    else if (S.view === "board" || S.view === "results") meta = ROUND_NAMES[S.ri] || `Round ${S.ri + 1}`;
     else if (S.view === "question") {
-      const cell = cellAt(S.cur);
-      meta = cell.final ? "Final wager" : cell.dd ? "Daily Double" : `${esc(cell.q.cat)} · <b>${cell.value}</b>`;
+      const cell = cellAt(S.cur), r = res(S.cur);
+      if (cell.bonus) meta = `Special · ${esc(S.teams[cell.team].name)}${r.rolled ? ` · <b>${fmt(cell.value)}</b>` : ""}`;
+      else meta = cell.final ? "Final Jeopardy" : cell.dd ? "Daily Double" : `${esc(cell.q.cat)} · <b>${cell.value}</b>`;
     } else if (S.view === "end") meta = "Final scores";
     let right = "";
     if (S.view === "question") {
       const r = res(S.cur), cell = cellAt(S.cur);
-      if (r.shown && !r.revealed) {
-        if (r.startedAt) right += `<span class="chip">${lockedCount()} of ${S.teams.length} locked in</span>`;
+      if (r.shown && r.rolled && !r.revealed) {
+        if (r.startedAt && !cell.bonus) right += `<span class="chip">${lockedCount()} of ${S.teams.length} locked in</span>`;
         right += `<button class="timer" id="timer" title="Start the clock (space)" aria-label="Answer clock"><span>${S.cfg.secs}</span></button>`;
       }
     }
@@ -427,6 +546,10 @@
   function viewBoard() {
     const round = S.rounds[S.ri];
     const done = roundDone(S.ri);
+    const left = specialsLeft(S.ri), nextT = nextSpecialTeam(S.ri);
+    let line = done ? "Board cleared." : `Next pick: <b>${esc(S.teams[S.picker].name)}</b>`;
+    if (left) line += ` <span class="sep">·</span> Specials left this round: ${left}`;
+    const banner = specialDue(S.ri) && nextT != null ? `<div class="special-due"><span>Special for <b>${esc(S.teams[nextT].name)}</b></span><button class="btn primary" data-act="special">Roll it</button></div>` : "";
     return `
     <section class="board-stage">
       <div class="board" style="--cols:${round.cols.length}">
@@ -437,7 +560,21 @@
           return `<button class="cell ${isDone ? "done" : ""}" data-cell="${key}" aria-label="${esc(col.cat)} for ${col.cells[k].value}${isDone ? ", played" : ""}">${isDone ? "" : col.cells[k].value}</button>`;
         }).join("")).join("")}
       </div>
-      <p class="picker">${done ? "Board cleared." : `Next pick: <b>${esc(S.teams[S.picker].name)}</b>`}</p>
+      <div class="board-foot"><p class="picker">${line}</p>${banner}</div>
+    </section>`;
+  }
+
+  function viewRoll(cell) {
+    const hint = live() ? `${esc(S.teams[cell.team].name)}, press Stop on your device` : "Shout stop!";
+    return `<section class="stage roll-stage">
+      <div class="rollboard">
+        ${ROLL_BASE.map((v, i) => `<div class="rcell" data-i="${i}" style="grid-row:${RING[i][0]};grid-column:${RING[i][1]}">${fmt(v * (S.ri + 1))}</div>`).join("")}
+        <div class="roll-center" id="rollcenter">
+          <p class="roll-title">Special</p>
+          <p class="roll-team">${esc(S.teams[cell.team].name)}</p>
+          <p class="roll-hint">${hint}</p>
+        </div>
+      </div>
     </section>`;
   }
 
@@ -452,10 +589,11 @@
 
   function viewQuestion() {
     const cell = cellAt(S.cur), q = cell.q, r = res(S.cur);
+    if (cell.bonus && !r.rolled) return viewRoll(cell);
     if (!r.shown) {
       const how = live() ? "Captains, enter your wager on your team's device." : "Captains, DM the host your wager.";
       return `<section class="stage"><div class="splash">
-        <h2>${cell.final ? "Final<br>Wager" : "Daily<br>Double"}</h2>
+        <h2>${cell.final ? "Final<br>Jeopardy" : "Daily<br>Double"}</h2>
         <span class="tag">${esc(q.cat)}${q.media ? (q.media.type === "video" ? " · Video" : " · Visual") : ""}</span>
         <p>${how} ${cell.final ? "Bet any part of your score." : `Bet up to your score, or up to ${fmt(boardTop(S.ri))} if you have less.`}</p>
       </div></section>`;
@@ -469,7 +607,8 @@
           return `<div class="${cls.join(" ")}"><span class="letter">${LETTERS[i]}</span><span class="text">${esc(o)}${r.revealed ? `<span class="who">${whoPicked(i)}</span>` : ""}</span></div>`;
         }).join("")}
       </div>` : `<div class="options-wait">Answers appear when the clock starts.</div>`;
-    const heading = `${isSpecial(cell) ? `<p class="category">${esc(q.cat)}</p>` : ""}<h1 class="prompt">${esc(q.q)}</h1>`;
+    const showCat = isWager(cell) || cell.bonus;
+    const heading = `${showCat ? `<p class="category">${esc(q.cat)}</p>` : ""}<h1 class="prompt">${esc(q.q)}</h1>`;
     if (q.media) {
       return `
     <section class="stage media-stage ${r.revealed ? "revealed" : ""}">
@@ -491,8 +630,10 @@
 
   // Team cards. Until the reveal they only say whether a team has locked in, never what it picked.
   function teamStatus(t) {
-    const r = res(S.cur);
+    const r = res(S.cur), cell = cellAt(S.cur);
     const joined = (S.claims || [])[t];
+    if (cell.bonus && t !== cell.team) return ["off", "Sitting out"];
+    if (cell.bonus && !r.rolled) return ["wait", "Rolling"];
     if (!r.shown) return r.wagers[t] != null ? ["ok", "Wager in"] : [joined ? "wait" : "off", joined ? "No wager yet" : "Not joined"];
     if (!r.startedAt) return [joined ? "wait" : "off", joined ? "Ready" : "Not joined"];
     if (r.picks[t] != null) return ["ok", "Locked in"];
@@ -504,40 +645,40 @@
       ${S.teams.map((tm, t) => {
         const sc = score(t);
         let body = "";
+        let mine = false;
         if (inQ) {
-          const cell = cellAt(S.cur), r = res(S.cur), special = isSpecial(cell), pick = r.picks[t];
+          const cell = cellAt(S.cur), r = res(S.cur), wager = isWager(cell), pick = r.picks[t];
+          mine = !!cell.bonus && t === cell.team;
+          const out = cell.bonus && t !== cell.team;
           if (!r.revealed) {
-            if (live()) {
+            if (live() || out || (cell.bonus && !r.rolled)) {
               const st = teamStatus(t);
               body += `<div class="status ${st[0]}">${st[1]}</div>`;
+            } else if (wager && !r.shown) {
+              const max = maxWager(t, S.cur);
+              body += `<label class="wager" for="wager-${t}">Wager <input id="wager-${t}" data-wager="${t}" type="number" inputmode="numeric" min="0" max="${max}" step="50" value="${r.wagers[t] != null ? r.wagers[t] : ""}" placeholder="max ${fmt(max)}"></label>`;
             } else {
-              if (special && !r.shown) {
-                const max = maxWager(t, S.cur);
-                body += `<label class="wager" for="wager-${t}">Wager <input id="wager-${t}" data-wager="${t}" type="number" inputmode="numeric" min="0" max="${max}" step="50" value="${r.wagers[t] != null ? r.wagers[t] : ""}" placeholder="max ${fmt(max)}"></label>`;
-              } else if (pick == null) {
-                body += `<div class="picks">${LETTERS.map((L, i) => `<button data-pick="${t}:${i}" aria-label="${esc(tm.name)} answers ${L}">${L}</button>`).join("")}</div>`;
-              } else {
-                body += `<div class="status ok">Locked in <button class="linkbtn" data-unpick="${t}">change</button></div>`;
-              }
-              if (!special && r.shown && !r.startedAt) {
+              if (pick == null) body += `<div class="picks">${LETTERS.map((L, i) => `<button data-pick="${t}:${i}" aria-label="${esc(tm.name)} answers ${L}">${L}</button>`).join("")}</div>`;
+              else body += `<div class="status ok">Locked in <button class="linkbtn" data-unpick="${t}">change</button></div>`;
+              if (!wager && !cell.bonus && r.shown && !r.startedAt) {
                 const used = tm.doubleUsed && tm.doubleUsed !== S.cur, on = tm.doubleUsed === S.cur;
                 body += `<div class="extras"><button data-double="${t}" class="${on ? "active" : used ? "spent" : ""}">Double</button></div>`;
               }
             }
+          } else if (out) {
+            body += `<div class="status off">Sat out</div>`;
           } else {
             const d = points(t, S.cur);
             const notes = [];
-            if (special) notes.push(pick == null ? "no answer" : `bet ${fmt(Number(r.wagers[t]) || 0)}`);
-            else {
-              if (r.doubled.includes(t)) notes.push("doubled");
-            }
+            if (wager) notes.push(pick == null ? "no answer" : `bet ${fmt(Number(r.wagers[t]) || 0)}`);
+            else if (r.doubled.includes(t)) notes.push("doubled");
             const cls = pick == null ? "none" : pick === cell.q.answer ? "right" : "wrong";
             body += `<div class="reveal-row"><span class="pickchip ${cls}">${pick == null ? "?" : LETTERS[pick]}</span><span class="delta ${d > 0 ? "up" : d < 0 ? "down" : "zero"}">${signed(d)}</span></div>`;
             if (notes.length) body += `<div class="notes">${notes.join(" · ")}</div>`;
           }
         }
         const picking = S.view === "board" && t === S.picker;
-        return `<article class="team ${picking ? "picking" : ""}">
+        return `<article class="team ${picking || mine ? "picking" : ""}">
           <div class="team-head"><span class="team-name" title="${esc(tm.name)}">${esc(tm.name)}</span><span class="team-score ${sc < 0 ? "neg" : ""}">${fmt(sc)}</span></div>
           ${body}
         </article>`;
@@ -551,7 +692,7 @@
     const best = Math.max(...rows.map(o => o.gain));
     return `<section class="stage">
       <div class="panel results">
-        <h2>Standings after round ${S.ri + 1}</h2>
+        <h2>Standings after ${ROUND_NAMES[S.ri] || "round " + (S.ri + 1)}</h2>
         <div class="standings">${rows.map((o, k) => `
           <div class="standing four">
             <span class="rank">${k + 1}</span>
@@ -565,12 +706,13 @@
 
   function viewHost() {
     if (S.view === "lobby") {
-      return `<footer class="hostbar"><button class="btn primary" data-act="tostart">Start round 1</button><span class="spacer"></span><button class="btn" data-act="key">Answer key</button><button class="btn" data-act="menu">Menu</button></footer>`;
+      return `<footer class="hostbar"><button class="btn primary" data-act="tostart">Start the game</button><span class="spacer"></span><button class="btn" data-act="key">Answer key</button><button class="btn" data-act="menu">Menu</button></footer>`;
     }
     if (S.view === "board") {
-      const done = roundDone(S.ri);
+      const done = roundDone(S.ri), left = specialsLeft(S.ri);
       return `<footer class="hostbar">
-        <button class="btn ${done ? "primary" : ""}" data-act="endround">End round ${S.ri + 1} and show standings</button>
+        <button class="btn ${done && !left ? "primary" : ""}" data-act="endround">End ${ROUND_NAMES[S.ri] || "round"} and show standings</button>
+        ${left ? `<button class="btn ${done ? "primary" : ""}" data-act="special">Roll a Special</button>` : ""}
         <span class="spacer"></span>
         <button class="btn" data-act="key">Answer key</button>
         <button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button>
@@ -579,16 +721,31 @@
     }
     if (S.view === "results") {
       const last = S.ri === S.rounds.length - 1;
-      return `<footer class="hostbar"><button class="btn primary" data-act="afterresults">${last ? (S.final ? "Go to the final wager" : "Show final scores") : `Start round ${S.ri + 2}`}</button><span class="spacer"></span><button class="btn" data-act="menu">Menu</button></footer>`;
+      return `<footer class="hostbar"><button class="btn primary" data-act="afterresults">${last ? (S.final ? "Go to Final Jeopardy" : "Show final scores") : `Start ${ROUND_NAMES[S.ri + 1] || "the next round"}`}</button><span class="spacer"></span><button class="btn" data-act="menu">Menu</button></footer>`;
     }
-    const r = res(S.cur);
+    const r = res(S.cur), cell = cellAt(S.cur);
+    if (cell.bonus && !r.rolled) {
+      const done = specDone(S.ri);
+      return `<footer class="hostbar">
+        <button class="btn" data-act="board">Back without playing<kbd>B</kbd></button>
+        <button class="btn primary" data-act="main">Stop<kbd>Space</kbd></button>
+        <label class="inline" for="special-team">Give it to
+          <select id="special-team">${S.teams.map((tm, t) => `<option value="${t}" ${t === cell.team ? "selected" : ""}>${esc(tm.name)}${done.includes(t) ? " (had one)" : ""}</option>`).join("")}</select>
+        </label>
+        <button class="btn" data-act="skipspecial">Skip this team</button>
+        <span class="spacer"></span>
+        <button class="btn" data-act="menu">Menu</button>
+      </footer>`;
+    }
     let main = "Reveal answer", key = "R";
     if (!r.shown) main = "Show the question";
     else if (!r.startedAt) { main = "Start clock"; key = "Space"; }
     else if (r.revealed) main = "Hide answer";
+    const back = r.revealed ? (S.cur === "final" ? "Final scores" : "Back to board") : (cell.bonus ? "Back without playing" : "Back without scoring");
     return `<footer class="hostbar">
-      <button class="btn" data-act="board">${r.revealed ? (S.cur === "final" ? "Final scores" : "Back to board") : "Back without scoring"}<kbd>B</kbd></button>
+      <button class="btn" data-act="board">${back}<kbd>B</kbd></button>
       <button class="btn primary" data-act="main">${main}<kbd>${key}</kbd></button>
+      ${cell.bonus && !r.revealed ? `<button class="btn" data-act="newq">New question</button>` : ""}
       <span class="spacer"></span>
       <button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button>
       <button class="btn" data-act="menu">Menu</button>
@@ -620,21 +777,60 @@
     <footer class="hostbar"><span class="spacer"></span><button class="btn" data-act="key">Answer key</button><button class="btn" data-act="menu">Menu</button></footer>`;
   }
 
+  // ---------- the Special characters ----------
+  // Three original critters. They bring the money in when a team is right and laugh when it's wrong.
+  function critter(x, y, fill, dark, mood, delay) {
+    const eyes = mood === "win"
+      ? `<circle cx="-17" cy="-10" r="13" fill="#fff"/><circle cx="17" cy="-10" r="13" fill="#fff"/><circle cx="-15" cy="-14" r="6" fill="#141414"/><circle cx="19" cy="-14" r="6" fill="#141414"/>`
+      : `<path d="M-30 -10 q12 -14 24 0 M6 -10 q12 -14 24 0" stroke="#141414" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+    const mouth = mood === "win"
+      ? `<path d="M-20 12 q20 24 40 0" stroke="#141414" stroke-width="5" fill="none" stroke-linecap="round"/>`
+      : `<ellipse cx="0" cy="18" rx="17" ry="15" fill="#3a0d10"/><ellipse cx="0" cy="27" rx="9" ry="5" fill="#e0607a"/>`;
+    const arms = mood === "win"
+      ? `<path d="M-48 0 L-70 -34 M48 0 L70 -34" stroke="${fill}" stroke-width="10" stroke-linecap="round"/>`
+      : `<path d="M-48 4 L-30 30 M48 0 L84 -6" stroke="${fill}" stroke-width="10" stroke-linecap="round"/>`;
+    return `<g transform="translate(${x} ${y})"><g class="crit ${mood}" style="animation-delay:${delay}s">
+      <path d="M0 -46 L-10 -74" stroke="${dark}" stroke-width="5"/><circle cx="-10" cy="-77" r="8" fill="#f2b632"/>
+      ${arms}
+      <ellipse cx="-20" cy="46" rx="16" ry="8" fill="${dark}"/><ellipse cx="20" cy="46" rx="16" ry="8" fill="${dark}"/>
+      <ellipse cx="0" cy="0" rx="52" ry="48" fill="${fill}"/>
+      <ellipse cx="-14" cy="-26" rx="16" ry="9" fill="#fff" opacity="0.25"/>
+      ${eyes}${mouth}
+    </g></g>`;
+  }
+  function viewCelebration() {
+    if (!celebrate) return "";
+    const win = celebrate.win;
+    const crew = [critter(200, 200, "#2fbf9f", "#1b7a65", win ? "win" : "lose", 0), critter(450, 210, "#a77bf0", "#6a45b0", win ? "win" : "lose", 0.12), critter(700, 200, "#f08a4b", "#b0582a", win ? "win" : "lose", 0.24)].join("");
+    const extras = win
+      ? `<g class="bag"><path d="M405 120 q45 -40 90 0 l18 110 q-63 30 -126 0 z" fill="#d9a62c"/><path d="M420 118 q30 -22 60 0" stroke="#8a5d00" stroke-width="8" fill="none"/><text x="450" y="200" text-anchor="middle" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="40" fill="#241800">${fmt(celebrate.amount)}</text></g>
+         ${Array.from({ length: 14 }, (_, i) => `<circle class="coin" cx="${60 + i * 60}" cy="-20" r="13" fill="#f2b632" stroke="#b07a00" stroke-width="3" style="animation-delay:${(i % 5) * 0.22}s;animation-duration:${1.4 + (i % 3) * 0.3}s"/>`).join("")}`
+      : [[150, 90, 0], [430, 80, 0.2], [690, 90, 0.4], [300, 60, 0.6], [570, 55, 0.3]].map(([x, y, d]) => `<text class="ha" x="${x}" y="${y}" style="animation-delay:${d}s" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="46" fill="#f2b632">HA</text>`).join("");
+    return `<div class="celebrate ${win ? "win" : "lose"}" data-dismiss>
+      <svg class="crew" viewBox="0 0 900 300" role="img" aria-label="${win ? "Characters bring the money" : "Characters laugh"}">${win ? crew + extras : extras + crew}</svg>
+      <p class="cel-title">${win ? `${esc(celebrate.team)} wins ${fmt(celebrate.amount)}` : `Not this time, ${esc(celebrate.team)}`}</p>
+    </div>`;
+  }
+
   function keyHTML() {
     const rows = [];
+    const row = (label, q) => `<tr><td class="v">${label}</td><td class="l">${LETTERS[q.answer]}</td><td><b>${esc(q.options[q.answer])}</b><div class="qq">${esc(q.q)}</div></td></tr>`;
     S.rounds.forEach((round, ri) => {
-      rows.push(`<h2>Round ${ri + 1}</h2>`);
+      rows.push(`<h2>${ROUND_NAMES[ri] || "Round " + (ri + 1)}</h2>`);
       round.cols.forEach(col => {
         rows.push(`<h3>${esc(col.cat)}</h3><table>`);
-        col.cells.forEach(cell => rows.push(`<tr><td class="v">${cell.value}${cell.dd ? " DD" : ""}</td><td class="l">${LETTERS[cell.q.answer]}</td><td><b>${esc(cell.q.options[cell.q.answer])}</b><div class="qq">${esc(cell.q.q)}</div></td></tr>`));
+        col.cells.forEach(cell => rows.push(row(cell.value + (cell.dd ? " DD" : ""), cell.q)));
         rows.push(`</table>`);
       });
     });
-    if (S.final) rows.push(`<h2>Final wager</h2><table><tr><td class="v">Final</td><td class="l">${LETTERS[S.final.q.answer]}</td><td><b>${esc(S.final.q.options[S.final.q.answer])}</b><div class="qq">${esc(S.final.q.q)}</div></td></tr></table>`);
+    if (S.final) rows.push(`<h2>Final Jeopardy</h2><table>${row("Final", S.final.q)}</table>`);
+    const sp = Object.keys(S.specials || {});
+    rows.push(`<h2>Specials</h2>`);
+    rows.push(sp.length ? `<table>${sp.map(k => row(esc(S.teams[S.specials[k].team].name), S.specials[k].q)).join("")}</table>` : `<p>Specials are drawn when they're rolled. Open the key again after rolling one to see its answer.</p>`);
     return rows.join("");
   }
   function openKey() {
-    const css = `body{font:14px/1.4 system-ui,sans-serif;margin:24px;color:#111;background:#fff}h1{margin:0 0 4px}h2{margin:24px 0 4px;border-bottom:2px solid #111}h3{margin:14px 0 4px}table{border-collapse:collapse;width:100%}td{border-top:1px solid #ddd;padding:5px 8px;vertical-align:top}td.v{width:70px;white-space:nowrap;color:#555}td.l{width:24px;font-weight:800;font-size:16px}.qq{color:#555;font-size:12px}`;
+    const css = `body{font:14px/1.4 system-ui,sans-serif;margin:24px;color:#111;background:#fff}h1{margin:0 0 4px}h2{margin:24px 0 4px;border-bottom:2px solid #111}h3{margin:14px 0 4px}table{border-collapse:collapse;width:100%}td{border-top:1px solid #ddd;padding:5px 8px;vertical-align:top}td.v{width:110px;white-space:nowrap;color:#555}td.l{width:24px;font-weight:800;font-size:16px}.qq{color:#555;font-size:12px}`;
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Design Jeopardy answer key</title><style>${css}</style></head><body><h1>Design Jeopardy answer key</h1><p>Letters match this game's boards.</p>${keyHTML()}</body></html>`;
     let w = null;
     try { w = window.open("", "design-jeopardy-key"); } catch (e) { w = null; }
@@ -694,9 +890,10 @@
     else if (S.view === "question") body += viewQuestion() + viewTeams() + viewHost();
     else if (S.view === "results") body += viewResults() + viewHost();
     else body += viewEnd();
-    app.innerHTML = body + viewOverlay();
+    app.innerHTML = body + viewOverlay() + viewCelebration();
     paintClock();
     drawQR();
+    ensureRolling();
   }
 
   // ---------- events ----------
@@ -713,7 +910,8 @@
     const el = e.target;
     if (["rounds", "cats", "rows", "secs"].includes(el.id)) { draft[el.id] = Number(el.value); render(); }
     if (el.id === "mode") { draft.mode = el.value; setupError = ""; render(); }
-    if (el.id === "final") { draft[el.id] = el.value === "1"; render(); }
+    if (el.id === "final" || el.id === "specials") { draft[el.id] = el.value === "1"; render(); }
+    if (el.id === "special-team") { act(() => { const cell = cellAt(S.cur); if (cell && cell.bonus) cell.team = Number(el.value); }); }
     if (el.dataset.wager != null) {
       const t = Number(el.dataset.wager), r = res(S.cur);
       if (el.value === "") delete r.wagers[t];
@@ -723,6 +921,7 @@
   });
 
   app.addEventListener("click", e => {
+    if (celebrate && e.target.closest("[data-dismiss]")) { celebrate = null; clearTimeout(celebrateTimer); render(); return; }
     const b = e.target.closest("button, [data-close]");
     if (!b) return;
     if (b.hasAttribute("data-close") && b === e.target) { overlay = null; confirmNew = false; render(); return; }
@@ -743,6 +942,9 @@
     switch (d.act) {
       case "main": mainAction(); break;
       case "board": act(backToBoard); break;
+      case "special": { const t = nextSpecialTeam(S.ri); if (t != null) act(() => startSpecial(t)); break; }
+      case "skipspecial": act(skipSpecial); break;
+      case "newq": act(newSpecialQuestion); break;
       case "tostart": act(() => { S.view = "board"; }); break;
       case "endround": act(() => { S.view = "results"; }); break;
       case "afterresults": act(afterResults); break;
@@ -763,12 +965,13 @@
   document.addEventListener("keydown", e => {
     const tag = (e.target.tagName || "").toLowerCase();
     if (["input", "textarea", "select"].includes(tag)) return;
+    if (e.key === "Escape" && celebrate) { celebrate = null; clearTimeout(celebrateTimer); render(); return; }
     if (e.key === "Escape" && overlay) { overlay = null; confirmNew = false; render(); return; }
     if (!S || overlay) return;
     if (e.key === "s" || e.key === "S") { overlay = "scores"; render(); return; }
     if (S.view !== "question") return;
     const r = res(S.cur);
-    if (e.key === " ") { e.preventDefault(); if (r.shown && !r.startedAt) startClock(); }
+    if (e.key === " ") { e.preventDefault(); if (!r.rolled) stopRoll(); else if (r.shown && !r.startedAt) startClock(); }
     else if (e.key === "r" || e.key === "R" || e.key === "Enter") mainAction();
     else if (e.key === "b" || e.key === "B") act(backToBoard);
   });

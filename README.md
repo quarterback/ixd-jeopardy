@@ -15,7 +15,7 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 ## Before class
 
 1. Open the site. Enter team names (six by default, up to eight).
-2. Pick **Teams answer on: Their own phones or laptops**, then the rounds and board size.
+2. Pick **Teams answer on: Their own phones or laptops**, then the rounds and board size. Round one is 100 to 500, Double Jeopardy 200 to 1000, and the optional Triple Jeopardy 300 to 1500.
 3. Click **Draw boards and start**. The lobby shows the join address, a room code and a QR code.
 4. One captain per team goes to `yoursite.netlify.app/play`, enters the code and taps their team. The lobby ticks each team off as it joins.
 5. Click **Answer key** to open this game's answers in a separate window. Keep it off the screen you share.
@@ -31,7 +31,19 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 
 **Daily Doubles and the final wager**: captains type their wager on their device. Your screen shows "Wager in" without the amount. Press **R** to show the question, then **Space** for the clock.
 
-**After each board**: click **End round** to show the standings, with points from that round and the totals.
+**After each board**: click **End Jeopardy** (or Double Jeopardy) to show the standings, with points from that round and the totals.
+
+## Specials
+
+Each round, every team gets one Special: a bonus question only that team answers.
+
+* The game spaces Specials evenly through the round. When one is due, the board shows **Special for (team)** with a **Roll it** button. **Roll a Special** in the bottom bar starts the next one any time.
+* Specials go in reverse team order. The last team gets the first Special of every round, and every round starts the order again.
+* Rolling opens a board of 16 point values with a light jumping between them. The team presses **Stop** on its device, or you press **Space**. The square it lands on is what they play for. Values double in Double Jeopardy and triple in Triple Jeopardy.
+* The question comes from any category and is never one already used in the game. Other teams sit it out.
+* A right answer earns the team the amount, and characters bring the money. A wrong answer costs nothing; the characters laugh, and that's it.
+* While it's rolling you can **Give it to** another team or **Skip this team**. Before the reveal, **New question** swaps in a different question and keeps the amount. **Back without playing** leaves the team's Special for later.
+* Specials can be switched off in setup.
 
 ## Scoring
 
@@ -40,7 +52,8 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 | Right answer | The square's value |
 | Wrong answer or no answer | 0 |
 | Double | Once per game, chosen on the team's device before the clock starts. Doubles the points for a right answer. |
-| Daily Double and final | Right answers win the wager, wrong answers lose it |
+| Daily Double and Final Jeopardy | Right answers win the wager, wrong answers lose it |
+| Special | Right answers win the rolled amount for that team only. Wrong answers score 0. |
 
 ## If something goes wrong
 
@@ -53,7 +66,7 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 
 | Key | Does |
 | --- | --- |
-| Space | Start the clock |
+| Space | Start the clock, or stop a Special roll |
 | R or Enter | Show the question, reveal, or hide the answer |
 | B | Back to the board |
 | S | Scoreboard |
