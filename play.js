@@ -74,17 +74,8 @@
     el.textContent = left > 0 ? String(Math.ceil(left)) : "Time";
     const bar = document.getElementById("countbar");
     if (bar) bar.style.width = (100 * left / state.secs) + "%";
-    const w = document.getElementById("worthnow");
-    if (w) w.textContent = fmt(worthAt(serverNow() - state.startedAt));
     if (left <= 0 && !(mine && mine.sub && mine.sub.pick != null) && !document.getElementById("timeup")) render(true);
   }, 100);
-
-  function worthAt(ms) {
-    if (!state || !state.speed) return state ? state.value : 0;
-    const frac = Math.min(1, Math.max(0, ms / (state.secs * 1000)));
-    const m = frac <= state.hold ? 1 : 1 - (1 - state.floor) * (frac - state.hold) / (1 - state.hold);
-    return Math.round(state.value * m / 10) * 10;
-  }
 
   // ---------- actions ----------
   async function lockAnswer() {
@@ -181,20 +172,17 @@
           const used = mine && mine.dbl && mine.dbl !== s.qid;
           const on = mine && mine.dbl === s.qid;
           dbl = used ? `<p class="p-sub">Your team already used its Double.</p>`
-            : `<button class="p-btn ${on ? "primary" : "ghost"} big" data-act="double">${on ? "Doubled. Tap to undo" : "Double this square"}</button><p class="p-sub">Once per game. Doubles both the points you win and the points you lose. Closes when the clock starts.</p>`;
+            : `<button class="p-btn ${on ? "primary" : "ghost"} big" data-act="double">${on ? "Doubled. Tap to undo" : "Double this square"}</button><p class="p-sub">Once per game. Doubles your points if you get it right. Closes when the clock starts.</p>`;
         }
         return `<section class="p-card center"><p class="p-kicker">${label}</p><h1 class="p-title">Read the question on the main screen</h1><p class="p-sub">Answers open here when the clock starts.</p>${dbl}</section>`;
       }
       const left = s.deadline - serverNow();
-      const top = `<div class="p-clock"><span id="count">${Math.max(0, Math.ceil(left / 1000))}</span><div class="p-bar"><span id="countbar"></span></div>${s.speed ? `<span class="p-worth">Worth <b id="worthnow">${fmt(worthAt(serverNow() - s.startedAt))}</b></span>` : ""}</div>`;
+      const top = `<div class="p-clock"><span id="count">${Math.max(0, Math.ceil(left / 1000))}</span><div class="p-bar"><span id="countbar"></span></div></div>`;
       if (sub.pick != null) {
-        return `<section class="p-card center"><p class="p-kicker">${label}</p><h1 class="p-title">Locked in: ${LETTERS[sub.pick]}</h1><p class="p-sub">${esc(s.options[sub.pick])}</p><p class="p-sub">Locked in at ${(sub.at / 1000).toFixed(1)} seconds. Wait for the reveal.</p></section>`;
+        return `<section class="p-card center"><p class="p-kicker">${label}</p><h1 class="p-title">Locked in: ${LETTERS[sub.pick]}</h1><p class="p-sub">${esc(s.options[sub.pick])}</p><p class="p-sub">Wait for the reveal on the main screen.</p></section>`;
       }
       if (left <= 0) return `<section class="p-card center" id="timeup"><p class="p-kicker">${label}</p><h1 class="p-title">Time's up</h1><p class="p-sub">No answer from your team this time.</p></section>`;
-      const rules = [];
-      if (s.speed) rules.push("Points drop as the clock runs.");
-      if (s.penalty) rules.push("Wrong answers lose a quarter of the value.");
-      if (s.kind !== "q") rules.push("Right wins your wager, wrong loses it.");
+      const rules = s.kind !== "q" ? ["Right wins your wager, wrong loses it."] : [];
       return `<section class="p-card">
         <p class="p-kicker">${label}</p>
         ${top}

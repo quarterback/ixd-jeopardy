@@ -388,12 +388,10 @@ button { cursor: pointer; }
 .p-list { display: grid; gap: 8px; }
 .team-pick { text-align: left; font-size: 20px; }
 .team-pick small { color: var(--ink-dim); font-weight: 600; }
-.p-clock { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.p-clock { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
 .p-clock #count { font-family: var(--display); font-weight: 900; font-size: 40px; min-width: 1.6em; font-variant-numeric: tabular-nums; }
 .p-bar { height: 10px; background: var(--stage); border-radius: 999px; overflow: hidden; }
 .p-bar span { display: block; height: 100%; width: 100%; background: var(--gold); }
-.p-worth { font-weight: 700; color: var(--ink-dim); }
-.p-worth b { font-family: var(--display); font-weight: 900; font-size: 26px; color: var(--gold); font-variant-numeric: tabular-nums; }
 .p-options { display: grid; gap: 8px; }
 .p-opt {
   display: grid; grid-template-columns: 2.2em 1fr; gap: 10px; align-items: center; text-align: left;

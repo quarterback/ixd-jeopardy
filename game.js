@@ -7,8 +7,6 @@
 
   const STORE = "design-jeopardy-v3";
   const LETTERS = ["A", "B", "C", "D"];
-  const SPEED_HOLD = 0.2;  // full value for the first 20 percent of the clock
-  const SPEED_FLOOR = 0.5; // a correct answer at the buzzer still earns half
   const app = document.getElementById("app");
 
   // ---------- storage ----------
@@ -100,7 +98,7 @@
   // ---------- state ----------
   let S = load();
   if (S && !S.cfg) S = null;
-  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 6, rows: 2, secs: 30, mode: "devices", speed: true, penalty: true, final: true };
+  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 6, rows: 2, secs: 30, mode: "devices", final: true };
   if (S) draft = Object.assign({}, draft, S.cfg, { names: S.teams.map(t => t.name) });
   let overlay = null, confirmNew = false, setupError = "", starting = false;
   const buzzed = {};
@@ -119,14 +117,6 @@
     return S.res[key];
   }
   function qid(key) { return key + "." + ((S.attempts && S.attempts[key]) || 0); }
-  function speedOn(cell) { return !!(S.cfg.speed && live() && !isSpecial(cell)); }
-  function mult(at) {
-    if (at == null) return 1;
-    const frac = Math.min(1, Math.max(0, at / (S.cfg.secs * 1000)));
-    return frac <= SPEED_HOLD ? 1 : 1 - (1 - SPEED_FLOOR) * (frac - SPEED_HOLD) / (1 - SPEED_HOLD);
-  }
-  function worth(cell, at) { return speedOn(cell) ? Math.round(cell.value * mult(at) / 10) * 10 : cell.value; }
-
   function points(t, key) {
     const r = S.res[key];
     if (!r || !r.revealed) return 0;
@@ -139,8 +129,7 @@
     }
     if (pick == null) return 0;
     const x = r.doubled.includes(t) ? 2 : 1;
-    if (pick === cell.q.answer) return worth(cell, r.at[t]) * x;
-    return S.cfg.penalty ? -(cell.value / 4) * x : 0;
+    return pick === cell.q.answer ? cell.value * x : 0;
   }
   function score(t, exceptKey) {
     let s = S.teams[t].adj;
@@ -177,8 +166,7 @@
     if (isSpecial(cell) && !r.shown) return Object.assign(base, common, { phase: "splash", maxWager: S.teams.map((_, t) => maxWager(t, S.cur)) });
     if (!r.revealed) {
       return Object.assign(base, common, {
-        phase: "question", secs: S.cfg.secs, speed: speedOn(cell), hold: SPEED_HOLD, floor: SPEED_FLOOR,
-        penalty: kind === "q" && !!S.cfg.penalty, startedAt: r.startedAt, deadline: r.deadline,
+        phase: "question", secs: S.cfg.secs, startedAt: r.startedAt, deadline: r.deadline,
         options: r.startedAt ? q.options : null
       });
     }
@@ -240,8 +228,6 @@
     const out = !!(r && r.startedAt && left <= 0);
     el.classList.toggle("out", out);
     el.querySelector("span").textContent = out ? "Time" : String(Math.ceil(left));
-    const w = document.getElementById("worth");
-    if (w && r && r.startedAt) w.textContent = fmt(worth(cellAt(S.cur), Math.min(S.cfg.secs * 1000, serverNow() - r.startedAt)));
   }
   let audio = null;
   function buzz() {
@@ -378,8 +364,6 @@
               ${field("cats", "Categories per board", [4, 5, 6], draft.cats, v => v)}
               ${field("rows", "Questions per category", [2, 3, 4, 5], draft.rows, v => v)}
               ${field("secs", "Answer clock", [15, 20, 25, 30, 45, 60], draft.secs, v => v + " seconds")}
-              ${onOff("speed", "Faster answers score more", draft.speed && draft.mode === "devices", "On", "Off", draft.mode !== "devices")}
-              ${onOff("penalty", "Wrong answers", draft.penalty, "Lose a quarter of the value", "Score zero")}
               ${onOff("final", "Final wager", draft.final, "On", "Off")}
             </div>
             <p class="note">${draft.rounds * draft.cats * draft.rows} squares drawn from ${BANK.reduce((n, c) => n + c.qs.length, 0)} questions, plus Daily Doubles${draft.final ? " and a final wager" : ""}.</p>
@@ -407,7 +391,6 @@
       const r = res(S.cur), cell = cellAt(S.cur);
       if (r.shown && !r.revealed) {
         if (r.startedAt) right += `<span class="chip">${lockedCount()} of ${S.teams.length} locked in</span>`;
-        if (r.startedAt && speedOn(cell)) right += `<span class="chip">Worth <b id="worth">${fmt(cell.value)}</b></span>`;
         right += `<button class="timer" id="timer" title="Start the clock (space)" aria-label="Answer clock"><span>${S.cfg.secs}</span></button>`;
       }
     }
@@ -547,7 +530,6 @@
             if (special) notes.push(pick == null ? "no answer" : `bet ${fmt(Number(r.wagers[t]) || 0)}`);
             else {
               if (r.doubled.includes(t)) notes.push("doubled");
-              if (pick != null && live() && r.at[t] != null) notes.push((r.at[t] / 1000).toFixed(1) + " sec");
             }
             const cls = pick == null ? "none" : pick === cell.q.answer ? "right" : "wrong";
             body += `<div class="reveal-row"><span class="pickchip ${cls}">${pick == null ? "?" : LETTERS[pick]}</span><span class="delta ${d > 0 ? "up" : d < 0 ? "down" : "zero"}">${signed(d)}</span></div>`;
@@ -731,7 +713,7 @@
     const el = e.target;
     if (["rounds", "cats", "rows", "secs"].includes(el.id)) { draft[el.id] = Number(el.value); render(); }
     if (el.id === "mode") { draft.mode = el.value; setupError = ""; render(); }
-    if (["speed", "penalty", "final"].includes(el.id)) { draft[el.id] = el.value === "1"; render(); }
+    if (el.id === "final") { draft[el.id] = el.value === "1"; render(); }
     if (el.dataset.wager != null) {
       const t = Number(el.dataset.wager), r = res(S.cur);
       if (el.value === "") delete r.wagers[t];

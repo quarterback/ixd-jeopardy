@@ -15,7 +15,7 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 ## Before class
 
 1. Open the site. Enter team names (six by default, up to eight).
-2. Pick **Teams answer on: Their own phones or laptops**, the rounds and board size, and the scoring options below.
+2. Pick **Teams answer on: Their own phones or laptops**, then the rounds and board size.
 3. Click **Draw boards and start**. The lobby shows the join address, a room code and a QR code.
 4. One captain per team goes to `yoursite.netlify.app/play`, enters the code and taps their team. The lobby ticks each team off as it joins.
 5. Click **Answer key** to open this game's answers in a separate window. Keep it off the screen you share.
@@ -26,21 +26,21 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 2. Read the question. The answers stay hidden on every screen. Teams can tap **Double this square** on their device now, once per game.
 3. Press **Space**. The clock starts and the four answers appear on the board and on team devices. The question itself never appears on team devices, which makes it harder to paste into a chatbot.
 4. Each team taps an answer and then **Lock in**. A locked answer can't change. Your screen shows "3 of 6 locked in" and "Locked in" on each card, never the letter.
-5. Press **R** to reveal. The board shows who picked what, how many points each team got and how fast it locked in. Each team's device shows its own result.
+5. Press **R** to reveal. The board shows who picked what and how many points each team got. Each team's device shows its own result.
 6. Press **B** to go back to the board.
 
 **Daily Doubles and the final wager**: captains type their wager on their device. Your screen shows "Wager in" without the amount. Press **R** to show the question, then **Space** for the clock.
 
 **After each board**: click **End round** to show the standings, with points from that round and the totals.
 
-## Scoring options
+## Scoring
 
-| Option | What it does |
+| Situation | Points |
 | --- | --- |
-| Faster answers score more | Full points for locking in during the first fifth of the clock. After that the value drops steadily to half at the buzzer. Both screens show what a right answer is worth right now. |
-| Wrong answers | Either score zero, or lose a quarter of the square's value. Losing points is what makes a fast guess risky. |
-| Double | Once per game, chosen before the clock starts. Doubles what the team wins or loses. |
-| Daily Double and final | Right answers win the wager, wrong answers lose it. Speed doesn't count. |
+| Right answer | The square's value |
+| Wrong answer or no answer | 0 |
+| Double | Once per game, chosen on the team's device before the clock starts. Doubles the points for a right answer. |
+| Daily Double and final | Right answers win the wager, wrong answers lose it |
 
 ## If something goes wrong
 
