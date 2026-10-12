@@ -496,3 +496,21 @@ button { cursor: pointer; }
 .p-aims .p-btn b { font-family: var(--display); font-size: 30px; color: var(--gold); line-height: 1; }
 @media (prefers-reduced-motion: reduce) { .bulb { animation: none; } }
 @media (max-width: 760px) { .wheel-wrap { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- No Special spaces and the gremlins ---------- */
+.rcell.nos { background: linear-gradient(180deg, #3a0f14, #22080b); border-color: #7a2a25; color: #ffb3ad; font-size: clamp(14px, 1.6vw, 22px); text-align: center; line-height: 1; text-transform: uppercase; }
+.rcell.nos.lit { background: #e0544a; color: #fff; border-color: #ffd0cc; box-shadow: 0 0 28px rgba(224,84,74,0.8); }
+.roll-title.nos { color: #ff8a80; }
+.pslot.nos rect { fill: #3a0f14; stroke: #7a2a25; }
+.pslot.nos text { fill: #ffb3ad; }
+.pslot.nos.landed rect { fill: #e0544a; stroke: #ffd0cc; }
+.pslot.nos.landed text { fill: #fff; }
+.wedge.lose.landed path { stroke: #e0544a; }
+.celebrate.whammy .cel-title { color: #ff8a80; }
+.grem { transform-box: fill-box; transform-origin: 50% 100%; animation: grem 0.36s ease-in-out infinite alternate; }
+@keyframes grem { from { transform: translateY(0) rotate(-5deg) scaleY(1); } to { transform: translateY(-18px) rotate(5deg) scaleY(1.04); } }
+.grem .eye { animation: look 1.2s steps(1) infinite; }
+@keyframes look { 50% { transform: translateX(-8px); } }
+.zap { transform-box: fill-box; transform-origin: center; animation: zap 0.3s ease-in-out infinite alternate; }
+@keyframes zap { from { opacity: 0.3; transform: scale(0.8) rotate(-10deg); } to { opacity: 1; transform: scale(1.2) rotate(10deg); } }
+@media (prefers-reduced-motion: reduce) { .grem, .grem .eye, .zap { animation: none; } }

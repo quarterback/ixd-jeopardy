@@ -157,6 +157,10 @@
     const owner = s.onlyTeam == null ? null : Number(s.onlyTeam);
     const ownerName = owner == null ? "" : esc(s.teams[owner] || "");
 
+    if (s.phase === "nospecial") {
+      if (owner === t) return `<section class="p-card center reveal bad"><h1 class="p-title">No Special</h1><p class="p-sub">The gremlins took it this round. You didn't lose any points.</p></section>`;
+      return viewWaiting(`${ownerName} rolled No Special`, "The gremlins took it. Watch the board.");
+    }
     if (s.phase === "roll") {
       if (owner !== t) return viewWaiting(`${ownerName} is ${s.rollType === "wheel" ? "spinning the wheel" : s.rollType === "plinko" ? "dropping a Plinko chip" : "rolling"} for a Special`, "Watch the main screen.");
       if (sub.stop != null || stopped === s.qid) return viewWaiting(s.rollType === "wheel" ? "Spinning" : s.rollType === "plinko" ? "Dropped" : "Stopped", "Watch the main screen to see what you're playing for.");

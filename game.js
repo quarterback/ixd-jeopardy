@@ -9,17 +9,18 @@
   const STORE = "design-jeopardy-v3";
   const LETTERS = ["A", "B", "C", "D"];
   // The 16 squares around the Special board, in round one points. Later rounds multiply them.
-  const ROLL_BASE = [100, 250, 500, 150, 300, 750, 200, 400, 1000, 100, 350, 500, 200, 600, 250, 800];
+  const ROLL_BASE = [100, 250, 500, null, 300, 750, 200, 400, 1000, null, 350, 500, 200, 600, null, 800]; // null squares are No Special
   // Where each of those squares sits on a 5 by 5 grid, going clockwise from the top left.
   const RING = [[1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [2, 5], [3, 5], [4, 5], [5, 5], [5, 4], [5, 3], [5, 2], [5, 1], [4, 1], [3, 1], [2, 1]];
   // The wheel: 24 wedges, one top wedge (index 15). Every wedge pays something.
-  const WHEEL_BASE = [300, 500, 250, 700, 400, 850, 350, 600, 200, 800, 450, 500, 300, 650, 250, 1000, 400, 550, 150, 750, 350, 600, 250, 900];
+  const WHEEL_BASE = [null, 500, 250, 700, 400, 850, null, 600, 200, 800, 450, 500, null, 650, 250, 1000, 400, 550, null, 750, 350, 600, 250, 900]; // null wedges are LOSE A TURN
   const WHEEL_TOP = 15;
-  const WHEEL_COLORS = ["#d7263d", "#f6c21c", "#1f6fd1", "#f07f1f", "#7b3fbf", "#1fa34a", "#e84a8a", "#13a6b8"];
+  const WHEEL_COLORS = ["#b8e04a", "#f4a64a", "#f3a6c8", "#e2382e", "#4cbf8c", "#8cc6f2", "#f6ec4a", "#a990d8"];
   // Plinko: 9 slots mirrored from the middle. The middle pays most; the slots beside it pay least.
-  const PLINKO_BASE = [200, 300, 500, 100, 1000, 100, 500, 300, 200];
+  const PLINKO_BASE = [200, 300, 500, null, 1000, null, 500, 300, 200]; // null slots are No Special
   const PLINKO_AIMS = [0, 2, 4, 6, 8]; // which slot each of the five drop spots sits above
   const PLINKO_ROWS = 8;
+  const NO_SPECIAL_ODDS = 1 / 6; // Plinko only; the board and wheel get their odds from how many empty spaces they have
   const app = document.getElementById("app");
 
   // ---------- storage ----------
@@ -225,6 +226,7 @@
     const cell = cellAt(S.cur), r = res(S.cur), q = cell.q;
     const kind = cell.bonus ? "special" : cell.final ? "final" : cell.dd ? "dd" : "q";
     const common = { qid: qid(S.cur), kind, cat: q.cat, value: cell.value || 0, visual: !!q.media, onlyTeam: cell.bonus ? cell.team : null };
+    if (cell.bonus && r.whammy) return Object.assign(base, common, { phase: "nospecial" });
     if (cell.bonus && !r.rolled) return Object.assign(base, common, { phase: "roll", rollType: cell.roll || "board" });
     if (isWager(cell) && !r.shown) return Object.assign(base, common, { phase: "splash", maxWager: S.teams.map((_, t) => maxWager(t, S.cur)) });
     if (!r.revealed) return Object.assign(base, common, { phase: "question", secs: S.cfg.secs, startedAt: r.startedAt, deadline: r.deadline, options: r.startedAt ? q.options : null });
@@ -274,20 +276,23 @@
   setInterval(poll, 1000);
 
   // ---------- the Special roll ----------
-  let roll = null; // { key, type, lit, timer, stopping, rot }
+  let roll = null; // { key, type, lit, timer, stopping }
   function mult() { return S.ri + 1; }
   function rollType(cell) { return cell.roll || "board"; }
+  function money(v) { return "$" + fmt(v); }
   function ensureRolling() {
-    if (!S || S.view !== "question" || !S.cur) return;
+    if (!S || S.view !== "question" || !S.cur) { if (roll && roll.timer) clearTimeout(roll.timer); if (!roll || !roll.stopping) roll = null; return; }
     const cell = cellAt(S.cur), r = res(S.cur);
     if (!cell.bonus || r.rolled) { if (roll && roll.timer) clearTimeout(roll.timer); roll = null; return; }
     if (roll && roll.key === S.cur) { paintRoll(); return; }
-    roll = { key: S.cur, type: rollType(cell), lit: Math.floor(Math.random() * 16), timer: null, stopping: false, rot: 0 };
+    if (roll && roll.timer) clearTimeout(roll.timer);
+    roll = { key: S.cur, type: rollType(cell), lit: Math.floor(Math.random() * 16), timer: null, stopping: false };
     if (roll.type !== "board") return;
+    const mine = roll;
     const step = () => {
-      if (!roll || roll.stopping) return;
-      roll.lit = nextLit(roll.lit); paintRoll();
-      roll.timer = setTimeout(step, 110);
+      if (roll !== mine || mine.stopping) return;
+      mine.lit = nextLit(mine.lit); paintRoll();
+      mine.timer = setTimeout(step, 110);
     };
     step();
   }
@@ -308,16 +313,27 @@
       if (!roll) return;
       if (i < delays.length) { roll.lit = nextLit(roll.lit); paintRoll(); setTimeout(slow, delays[i++]); return; }
       document.querySelectorAll(".rcell.lit").forEach(el => el.classList.add("landed"));
-      land(ROLL_BASE[roll.lit] * mult());
+      land(roll.lit, ROLL_BASE[roll.lit]);
     };
     slow();
   }
-  // Shows the amount for a moment, then moves on to the question.
-  function land(value) {
+  // base is null for a No Special space. Shows the result for a moment, then moves on.
+  function land(index, base) {
     const key = roll.key, cell = cellAt(key), r = res(key);
-    cell.value = value;
+    cell.landIdx = index;
     const center = document.getElementById("rollcenter");
-    if (center) center.innerHTML = `<p class="roll-title">Playing for</p><p class="roll-amount">${fmt(value)}</p>`;
+    if (base == null) {
+      cell.value = 0;
+      if (center) center.innerHTML = `<p class="roll-title nos">No Special</p><p class="roll-team">${esc(S.teams[cell.team].name)}</p>`;
+      setTimeout(() => {
+        r.rolled = true; r.whammy = true; roll = null;
+        showWhammy(cell);
+        persist(); publish(); render();
+      }, 1300);
+      return;
+    }
+    cell.value = base * mult();
+    if (center) center.innerHTML = `<p class="roll-title">Playing for</p><p class="roll-amount">${money(cell.value)}</p>`;
     setTimeout(() => { r.rolled = true; r.shown = true; roll = null; persist(); publish(); render(); }, 1600);
   }
   // Spins with an ease out, ticking the flapper every time a peg passes it.
@@ -339,10 +355,10 @@
       else {
         const wedge = document.querySelector(`.wedge[data-i="${w}"]`);
         if (wedge) wedge.classList.add("landed");
-        land(WHEEL_BASE[w] * mult());
+        land(w, WHEEL_BASE[w]);
       }
     };
-    if (el) requestAnimationFrame(frame); else land(WHEEL_BASE[w] * mult());
+    if (el) requestAnimationFrame(frame); else land(w, WHEEL_BASE[w]);
   }
   function tick(flap) {
     if (flap && flap.animate) flap.animate([{ transform: "rotate(-26deg)" }, { transform: "rotate(0deg)" }], { duration: 130, easing: "ease-out" });
@@ -356,20 +372,27 @@
     } catch (e) { /* no sound */ }
   }
   function plinkoX(p) { return 30 + 30 * p; }
+  // Plinko picks the slot first so No Special comes up about 1 in 6 times wherever the chip is dropped,
+  // then draws a bounce path that really ends there.
+  function plinkoPath(aim) {
+    const p0 = PLINKO_AIMS[Math.max(0, Math.min(4, aim))] * 2;
+    const walk = () => { let p = p0; const ps = [p]; for (let j = 0; j < PLINKO_ROWS; j++) { p += Math.random() < 0.5 ? -1 : 1; if (p < 0) p = 1; if (p > 16) p = 15; ps.push(p); } return ps; };
+    const reach = new Set(); for (let k = 0; k < 600; k++) reach.add(walk()[PLINKO_ROWS] / 2);
+    const slots = Array.from(reach);
+    const ns = slots.filter(s => PLINKO_BASE[s] == null), ok = slots.filter(s => PLINKO_BASE[s] != null);
+    let target;
+    if (ns.length && ok.length) target = Math.random() < NO_SPECIAL_ODDS ? ns[Math.floor(Math.random() * ns.length)] : ok[Math.floor(Math.random() * ok.length)];
+    else target = slots[Math.floor(Math.random() * slots.length)];
+    for (let k = 0; k < 6000; k++) { const ps = walk(); if (ps[PLINKO_ROWS] / 2 === target) return ps; }
+    return walk();
+  }
   function dropChip(aim) {
-    let p = PLINKO_AIMS[Math.max(0, Math.min(4, aim))] * 2;
-    const pts = [[plinkoX(p), 18]];
-    for (let j = 0; j < PLINKO_ROWS; j++) {
-      p += Math.random() < 0.5 ? -1 : 1;
-      if (p < 0) p = 1;
-      if (p > 16) p = 15;
-      pts.push([plinkoX(p), 90 + j * 55]);
-    }
-    const slot = p / 2;
-    pts.push([plinkoX(p), 548]);
+    const ps = plinkoPath(aim);
+    const pts = [[plinkoX(ps[0]), 18]].concat(ps.slice(1).map((p, j) => [plinkoX(p), 90 + j * 55]));
+    const slot = ps[PLINKO_ROWS] / 2;
+    pts.push([plinkoX(ps[PLINKO_ROWS]), 548]);
     const chip = document.getElementById("chip");
-    const seg = 330;
-    const t0 = performance.now();
+    const seg = 330, t0 = performance.now();
     const frame = now => {
       const t = Math.max(0, (now - t0) / seg);
       const i = Math.min(pts.length - 2, Math.floor(t));
@@ -382,11 +405,10 @@
       else {
         const el = document.querySelector(`.pslot[data-i="${slot}"]`);
         if (el) el.classList.add("landed");
-        land(PLINKO_BASE[slot] * mult());
+        land(slot, PLINKO_BASE[slot]);
       }
     };
-    if (chip) requestAnimationFrame(frame);
-    else land(PLINKO_BASE[slot] * mult());
+    if (chip) requestAnimationFrame(frame); else land(slot, PLINKO_BASE[slot]);
   }
 
   // ---------- clock ----------
@@ -450,7 +472,7 @@
   function backToBoard() {
     if (!S.cur) return;
     const key = S.cur, r = res(key), cell = cellAt(key);
-    if (r.revealed) {
+    if (r.revealed || (cell.bonus && r.whammy)) {
       if (!r.done) {
         r.done = true;
         if (cell.bonus) { if (!specDone(S.ri).includes(cell.team)) specDone(S.ri).push(cell.team); }
@@ -510,6 +532,7 @@
   async function mainAction() {
     if (!S || S.view !== "question") return;
     const r = res(S.cur), cell = cellAt(S.cur);
+    if (r.whammy) return;
     if (!r.rolled) { stopRoll(); return; }
     if (!r.shown) { r.shown = true; persist(); publish(); render(); return; }
     if (!r.startedAt) { await startClock(); return; }
@@ -591,7 +614,7 @@
     else if (S.view === "board" || S.view === "results") meta = ROUND_NAMES[S.ri] || `Round ${S.ri + 1}`;
     else if (S.view === "question") {
       const cell = cellAt(S.cur), r = res(S.cur);
-      if (cell.bonus) meta = `Special · ${esc(S.teams[cell.team].name)}${r.rolled ? ` · <b>${fmt(cell.value)}</b>` : ""}`;
+      if (cell.bonus) meta = `Special · ${esc(S.teams[cell.team].name)}${r.rolled && !r.whammy ? ` · <b>${money(cell.value)}</b>` : ""}`;
       else meta = cell.final ? "Final Jeopardy" : cell.dd ? "Daily Double" : `${esc(cell.q.cat)} · <b>${cell.value}</b>`;
     } else if (S.view === "end") meta = "Final scores";
     let right = "";
@@ -655,6 +678,7 @@
 
   function rollInfo(cell, verb) {
     const name = esc(S.teams[cell.team].name);
+    if (res(S.cur).whammy) return `<div class="roll-center" id="rollcenter"><p class="roll-title nos">No Special</p><p class="roll-team">${name}</p><p class="roll-hint">Better luck next round.</p></div>`;
     const hint = live() ? `${name}, ${verb} on your device` : "Tell me when!";
     return `<div class="roll-center" id="rollcenter">
           <p class="roll-title">Special</p>
@@ -666,58 +690,61 @@
     const type = rollType(cell);
     if (type === "wheel") return viewWheel(cell);
     if (type === "plinko") return viewPlinko(cell);
+    const landed = res(S.cur).whammy ? cell.landIdx : null;
     return `<section class="stage roll-stage">
       <div class="rollboard">
-        ${ROLL_BASE.map((v, i) => `<div class="rcell" data-i="${i}" style="grid-row:${RING[i][0]};grid-column:${RING[i][1]}">${fmt(v * mult())}</div>`).join("")}
+        ${ROLL_BASE.map((v, i) => `<div class="rcell ${v == null ? "nos" : ""} ${landed === i ? "lit landed" : ""}" data-i="${i}" style="grid-row:${RING[i][0]};grid-column:${RING[i][1]}">${v == null ? "<span>No<br>Special</span>" : money(v * mult())}</div>`).join("")}
         ${rollInfo(cell, "press Stop")}
       </div>
     </section>`;
   }
-  // A game show prize wheel: stacked digits reading from the rim inward, pegs on the rim, a flapper at the top.
+  // A flat game show wheel: bright wedges, a $ and the points stacked digit by digit from the rim inward.
   function viewWheel(cell) {
     const R = 236, n = WHEEL_BASE.length, step = 360 / n;
     const pt = (deg, r) => { const a = (deg - 90) * Math.PI / 180; return [(r * Math.cos(a)).toFixed(2), (r * Math.sin(a)).toFixed(2)]; };
+    const slab = `font-family="'Alfa Slab One', Rockwell, Georgia, serif"`;
+    const stackText = (chars, startY, size, gapK, ink, outline) => chars.map((d, k) => `<text x="0" y="${startY + k * size * gapK}" text-anchor="middle" dominant-baseline="central" ${slab} font-size="${size}" fill="${ink}" stroke="${outline}" stroke-width="${outline === "none" ? 0 : 2.2}" paint-order="stroke">${d}</text>`).join("");
     const wedges = WHEEL_BASE.map((v, i) => {
       const [x0, y0] = pt(i * step - step / 2, R), [x1, y1] = pt(i * step + step / 2, R);
-      const top = i === WHEEL_TOP;
-      const fill = top ? "url(#silver)" : WHEEL_COLORS[i % WHEEL_COLORS.length];
-      const light = top || WHEEL_COLORS[i % WHEEL_COLORS.length] === "#f6c21c";
-      const ink = light ? "#1b1b1b" : "#ffffff";
-      const digits = String(v * mult()).split("");
-      const size = digits.length > 3 ? 27 : 31;
-      const gap = size * 0.86;
-      const stack = digits.map((d, k) => `<text x="0" y="${-(R - 30) + k * gap}" text-anchor="middle" dominant-baseline="central" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="${size}" fill="${ink}" stroke="${light ? "none" : "#00000055"}" stroke-width="1">${d}</text>`).join("");
-      return `<g class="wedge" data-i="${i}">
-        <path d="M0 0 L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z" fill="${fill}" stroke="#2a2a2a" stroke-width="2.5"/>
-        <g transform="rotate(${i * step})">${stack}</g></g>`;
+      const lose = v == null, top = i === WHEEL_TOP;
+      const fill = lose ? "#ffffff" : top ? "url(#silver)" : WHEEL_COLORS[i % WHEEL_COLORS.length];
+      let label;
+      if (lose) {
+        label = `<text x="0" y="${-(R - 20)}" text-anchor="middle" dominant-baseline="central" ${slab} font-size="13" fill="#141414">LOSE</text>
+          <text x="0" y="${-(R - 38)}" text-anchor="middle" dominant-baseline="central" ${slab} font-size="13" fill="#141414">A</text>
+          ${stackText(["T", "U", "R", "N"], -(R - 64), 25, 0.92, "#141414", "none")}`;
+      } else {
+        const digits = String(v * mult()).split("");
+        const size = digits.length > 3 ? 27 : 31;
+        label = `<text x="0" y="${-(R - 20)}" text-anchor="middle" dominant-baseline="central" ${slab} font-size="18" fill="#141414">$</text>` + stackText(digits, -(R - 46), size, 0.88, "#141414", "#ffffff");
+      }
+      return `<g class="wedge ${lose ? "lose" : ""}" data-i="${i}">
+        <path d="M0 0 L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z" fill="${fill}" stroke="#3a3a3a" stroke-width="2"/>
+        <g transform="rotate(${i * step})">${label}</g></g>`;
     }).join("");
-    const pegs = Array.from({ length: n }, (_, i) => { const [x, y] = pt(i * step + step / 2, R - 9); return `<circle cx="${x}" cy="${y}" r="5.5" fill="url(#peg)" stroke="#5a4100" stroke-width="1.5"/>`; }).join("");
-    const bulbs = Array.from({ length: 36 }, (_, i) => { const a = (i * 10 - 90) * Math.PI / 180; return `<circle class="bulb" cx="${((R + 17) * Math.cos(a)).toFixed(1)}" cy="${((R + 17) * Math.sin(a)).toFixed(1)}" r="5" style="animation-delay:${(i % 2) * 0.35}s"/>`; }).join("");
+    const rivets = Array.from({ length: 48 }, (_, i) => { const a = (i * 7.5 - 90) * Math.PI / 180; return `<circle cx="${((R + 13) * Math.cos(a)).toFixed(1)}" cy="${((R + 13) * Math.sin(a)).toFixed(1)}" r="2.6" fill="#8a5d00"/>`; }).join("");
+    const pegs = Array.from({ length: n }, (_, i) => { const [x, y] = pt(i * step + step / 2, R - 6); return `<circle cx="${x}" cy="${y}" r="3.6" fill="#8a5d00"/>`; }).join("");
+    const r = res(S.cur);
+    const start = r.whammy && cell.landIdx != null ? -cell.landIdx * step : 0;
     return `<section class="stage roll-stage">
       <div class="wheel-wrap">
-        <div class="wheel-tilt">
         <svg class="wheel" viewBox="-275 -300 550 580" role="img" aria-label="Prize wheel">
           <defs>
-            <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#cfd5e2"/><stop offset="1" stop-color="#f4f6fb"/></linearGradient>
-            <radialGradient id="peg"><stop offset="0" stop-color="#fff6c8"/><stop offset="1" stop-color="#c8960e"/></radialGradient>
-            <radialGradient id="hub"><stop offset="0" stop-color="#ffe680"/><stop offset="0.7" stop-color="#e2a90e"/><stop offset="1" stop-color="#8a5d00"/></radialGradient>
+            <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#c9ced8"/><stop offset="1" stop-color="#eef0f4"/></linearGradient>
           </defs>
-          <circle r="${R + 30}" fill="#1b1f33"/>
-          <circle r="${R + 30}" fill="none" stroke="#e2a90e" stroke-width="5"/>
-          ${bulbs}
-          <g id="wheelspin" transform="rotate(0)">
+          <circle r="${R + 26}" fill="#c99a2e"/>
+          <circle r="${R + 26}" fill="none" stroke="#8a5d00" stroke-width="3"/>
+          ${rivets}
+          <g id="wheelspin" transform="rotate(${start})">
             ${wedges}${pegs}
-            <circle r="${R}" fill="none" stroke="#2a2a2a" stroke-width="4"/>
-            <circle r="58" fill="url(#hub)" stroke="#5a4100" stroke-width="4"/>
-            <circle r="44" fill="none" stroke="#fff3c4" stroke-width="2" opacity="0.7"/>
-            ${Array.from({ length: 8 }, (_, i) => `<path d="M0 -40 L5 -6 L0 0 L-5 -6 Z" fill="#fff3c4" opacity="0.8" transform="rotate(${i * 45})"/>`).join("")}
+            <circle r="${R}" fill="none" stroke="#3a3a3a" stroke-width="3"/>
+            <circle r="74" fill="#c99a2e" stroke="#8a5d00" stroke-width="4"/>
           </g>
           <g id="flapper" class="flapper">
-            <path d="M-17 -296 L17 -296 L4 -232 L-4 -232 Z" fill="#d7263d" stroke="#ffffff" stroke-width="3"/>
-            <circle cx="0" cy="-286" r="7" fill="#ffffff"/>
+            <path d="M-16 -298 L16 -298 L4 -236 L-4 -236 Z" fill="#e2382e" stroke="#ffffff" stroke-width="3"/>
+            <circle cx="0" cy="-288" r="6" fill="#ffffff"/>
           </g>
         </svg>
-        </div>
         ${rollInfo(cell, "tap Spin")}
       </div>
     </section>`;
@@ -726,17 +753,24 @@
     let pegs = "";
     for (let j = 0; j < PLINKO_ROWS; j++) {
       const y = 90 + j * 55 + 22;
-      for (let m = 0; m <= 18; m++) if ((m + j) % 2 === 0 && m > 0 && m < 18) pegs += `<circle cx="${m * 30}" cy="${y}" r="5" fill="#c9d1f5"/>`;
+      for (let m = 1; m < 18; m++) if ((m + j) % 2 === 0) pegs += `<circle cx="${m * 30}" cy="${y}" r="5" fill="#c9d1f5"/>`;
     }
-    const slots = PLINKO_BASE.map((v, i) => `<g class="pslot ${i === 4 ? "top" : ""}" data-i="${i}"><rect x="${i * 60 + 2}" y="520" width="56" height="78" rx="6"/><text x="${i * 60 + 30}" y="566" text-anchor="middle" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="${v * mult() >= 1000 ? 19 : 22}">${fmt(v * mult())}</text></g>`).join("");
+    const landed = res(S.cur).whammy ? cell.landIdx : null;
+    const slots = PLINKO_BASE.map((v, i) => {
+      const label = v == null
+        ? `<text x="${i * 60 + 30}" y="552" text-anchor="middle" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="15">NO</text><text x="${i * 60 + 30}" y="572" text-anchor="middle" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="12">SPECIAL</text>`
+        : `<text x="${i * 60 + 30}" y="566" text-anchor="middle" font-family="Big Shoulders Display, Arial Black, sans-serif" font-weight="900" font-size="${v * mult() >= 1000 ? 17 : 20}">${money(v * mult())}</text>`;
+      return `<g class="pslot ${i === 4 ? "top" : ""} ${v == null ? "nos" : ""} ${landed === i ? "landed" : ""}" data-i="${i}"><rect x="${i * 60 + 2}" y="520" width="56" height="78" rx="6"/>${label}</g>`;
+    }).join("");
     const aims = PLINKO_AIMS.map((s, a) => `<g class="paim" data-aim="${a}"><path d="M${30 + 60 * s - 14} 2 L${30 + 60 * s + 14} 2 L${30 + 60 * s} 20 Z"/></g>`).join("");
     const walls = Array.from({ length: 8 }, (_, i) => `<rect x="${(i + 1) * 60 - 2}" y="500" width="4" height="98" fill="#2e3f99"/>`).join("");
+    const chipAt = landed != null ? `cx="${plinkoX(landed * 2)}" cy="548"` : `cx="${plinkoX(8)}" cy="-40"`;
     return `<section class="stage roll-stage">
       <div class="wheel-wrap">
         <svg class="plinko" viewBox="-6 -4 552 606" role="img" aria-label="Plinko board">
           <rect x="-6" y="-4" width="552" height="606" rx="14" fill="#0e1a52" stroke="#2e3f99" stroke-width="3"/>
           ${pegs}${walls}${slots}${aims}
-          <circle id="chip" cx="${plinkoX(8)}" cy="-40" r="16" fill="#f2b632" stroke="#8a5d00" stroke-width="4"/>
+          <circle id="chip" ${chipAt} r="16" fill="#f2b632" stroke="#8a5d00" stroke-width="4"/>
         </svg>
         ${rollInfo(cell, "pick a spot to drop")}
       </div>
@@ -754,7 +788,7 @@
 
   function viewQuestion() {
     const cell = cellAt(S.cur), q = cell.q, r = res(S.cur);
-    if (cell.bonus && !r.rolled) return viewRoll(cell);
+    if (cell.bonus && (!r.rolled || r.whammy)) return viewRoll(cell);
     if (!r.shown) {
       const how = live() ? "Captains, enter your wager on your team's device." : "Captains, DM the host your wager.";
       return `<section class="stage"><div class="splash">
@@ -798,6 +832,7 @@
     const r = res(S.cur), cell = cellAt(S.cur);
     const joined = (S.claims || [])[t];
     if (cell.bonus && t !== cell.team) return ["off", "Sitting out"];
+    if (cell.bonus && r.whammy) return ["off", "No Special"];
     if (cell.bonus && !r.rolled) return ["wait", "Rolling"];
     if (!r.shown) return r.wagers[t] != null ? ["ok", "Wager in"] : [joined ? "wait" : "off", joined ? "No wager yet" : "Not joined"];
     if (!r.startedAt) return [joined ? "wait" : "off", joined ? "Ready" : "Not joined"];
@@ -816,7 +851,7 @@
           mine = !!cell.bonus && t === cell.team;
           const out = cell.bonus && t !== cell.team;
           if (!r.revealed) {
-            if (live() || out || (cell.bonus && !r.rolled)) {
+            if (live() || out || (cell.bonus && (!r.rolled || r.whammy))) {
               const st = teamStatus(t);
               body += `<div class="status ${st[0]}">${st[1]}</div>`;
             } else if (wager && !r.shown) {
@@ -889,6 +924,9 @@
       return `<footer class="hostbar"><button class="btn primary" data-act="afterresults">${last ? (S.final ? "Go to Final Jeopardy" : "Show final scores") : `Start ${ROUND_NAMES[S.ri + 1] || "the next round"}`}</button><span class="spacer"></span><button class="btn" data-act="menu">Menu</button></footer>`;
     }
     const r = res(S.cur), cell = cellAt(S.cur);
+    if (cell.bonus && r.whammy) {
+      return `<footer class="hostbar"><button class="btn primary" data-act="board">Back to board<kbd>B</kbd></button><span class="spacer"></span><button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button><button class="btn" data-act="menu">Menu</button></footer>`;
+    }
     if (cell.bonus && !r.rolled) {
       const done = specDone(S.ri);
       return `<footer class="hostbar">
@@ -963,7 +1001,39 @@
       ${eyes}${mouth}
     </g></g>`;
   }
+  // The No Special crew: one eyed horned gremlins, a different set from the critters.
+  function gremlin(x, y, fill, dark, delay, flip) {
+    return `<g transform="translate(${x} ${y}) scale(${flip ? -1 : 1} 1)"><g class="grem" style="animation-delay:${delay}s">
+      <path d="M-30 -40 L-46 -78 L-14 -50 Z M30 -40 L46 -78 L14 -50 Z" fill="#f4f1e6" stroke="${dark}" stroke-width="3"/>
+      <path d="M40 30 q40 10 42 -26 l10 6 l-4 -16 l-14 4 l8 4 q-2 26 -34 18" fill="${fill}" stroke="${dark}" stroke-width="3"/>
+      <path d="M-24 50 l-6 14 h18 z M24 50 l6 14 h-18 z" fill="${dark}"/>
+      <path d="M-50 10 C-56 -40 -30 -62 0 -62 C30 -62 56 -40 50 10 C46 46 24 58 0 58 C-24 58 -46 46 -50 10 Z" fill="${fill}" stroke="${dark}" stroke-width="3.5"/>
+      <path d="M-54 6 L-84 -22 M54 6 L84 -22" stroke="${fill}" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="-86" cy="-25" r="8" fill="${fill}" stroke="${dark}" stroke-width="3"/><circle cx="86" cy="-25" r="8" fill="${fill}" stroke="${dark}" stroke-width="3"/>
+      <circle cx="0" cy="-18" r="22" fill="#ffffff" stroke="${dark}" stroke-width="3"/>
+      <circle class="eye" cx="4" cy="-16" r="10" fill="#141414"/><circle cx="8" cy="-21" r="3.5" fill="#ffffff"/>
+      <path d="M-30 18 Q0 46 30 18 Z" fill="#3a0d10" stroke="${dark}" stroke-width="3"/>
+      <path d="M-22 21 l5 9 l5 -8 l5 9 l5 -9 l5 9 l5 -9 l5 8 l4 -9" fill="#ffffff"/>
+    </g></g>`;
+  }
+  let whammy = null, whammyTimer = null;
+  function showWhammy(cell) {
+    clearTimeout(whammyTimer);
+    whammy = { team: S.teams[cell.team].name };
+    whammyTimer = setTimeout(() => { whammy = null; render(); }, 5600);
+  }
+  function viewWhammy() {
+    if (!whammy) return "";
+    const crew = [gremlin(190, 190, "#e2382e", "#5a0d0a", 0, false), gremlin(450, 175, "#7c3fd1", "#2a0f55", 0.15, true), gremlin(710, 190, "#1fa34a", "#0b3d1b", 0.3, false)].join("");
+    const zaps = [[90, 60], [330, 40], [600, 50], [820, 70], [450, 290]].map(([x, y], i) => `<path class="zap" style="animation-delay:${i * 0.12}s" transform="translate(${x} ${y})" d="M0 -26 L14 -4 L4 -2 L16 26 L-12 0 L-2 -2 Z" fill="#f2b632"/>`).join("");
+    return `<div class="celebrate whammy" data-dismiss>
+      <svg class="crew" viewBox="0 0 900 320" role="img" aria-label="Gremlins take the Special">${zaps}${crew}
+        <g class="poof"><circle cx="450" cy="300" r="40" fill="#ffffff" opacity="0.15"/></g></svg>
+      <p class="cel-title">No Special for ${esc(whammy.team)}</p>
+    </div>`;
+  }
   function viewCelebration() {
+    if (whammy) return viewWhammy();
     if (!celebrate) return "";
     const win = celebrate.win;
     const crew = [critter(200, 200, "#2fbf9f", "#1b7a65", win ? "win" : "lose", 0), critter(450, 210, "#a77bf0", "#6a45b0", win ? "win" : "lose", 0.12), critter(700, 200, "#f08a4b", "#b0582a", win ? "win" : "lose", 0.24)].join("");
@@ -1087,7 +1157,7 @@
   });
 
   app.addEventListener("click", e => {
-    if (celebrate && e.target.closest("[data-dismiss]")) { celebrate = null; clearTimeout(celebrateTimer); render(); return; }
+    if ((celebrate || whammy) && e.target.closest("[data-dismiss]")) { celebrate = null; whammy = null; clearTimeout(celebrateTimer); clearTimeout(whammyTimer); render(); return; }
     const aimEl = e.target.closest(".paim");
     if (aimEl && roll && roll.type === "plinko") { stopRoll(Number(aimEl.dataset.aim)); return; }
     if (e.target.closest(".wheel") && roll && roll.type === "wheel") { stopRoll(); return; }
@@ -1134,13 +1204,13 @@
   document.addEventListener("keydown", e => {
     const tag = (e.target.tagName || "").toLowerCase();
     if (["input", "textarea", "select"].includes(tag)) return;
-    if (e.key === "Escape" && celebrate) { celebrate = null; clearTimeout(celebrateTimer); render(); return; }
+    if (e.key === "Escape" && (celebrate || whammy)) { celebrate = null; whammy = null; clearTimeout(celebrateTimer); clearTimeout(whammyTimer); render(); return; }
     if (e.key === "Escape" && overlay) { overlay = null; confirmNew = false; render(); return; }
     if (!S || overlay) return;
     if (e.key === "s" || e.key === "S") { overlay = "scores"; render(); return; }
     if (S.view !== "question") return;
     const r = res(S.cur);
-    if (e.key === " ") { e.preventDefault(); if (!r.rolled) stopRoll(); else if (r.shown && !r.startedAt) startClock(); }
+    if (e.key === " ") { e.preventDefault(); if (r.whammy) return; if (!r.rolled) stopRoll(); else if (r.shown && !r.startedAt) startClock(); }
     else if (e.key === "r" || e.key === "R" || e.key === "Enter") mainAction();
     else if (e.key === "b" || e.key === "B") act(backToBoard);
   });
