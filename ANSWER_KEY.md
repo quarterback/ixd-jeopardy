@@ -40,23 +40,22 @@ This file is generated. After editing `bank.js`, run `node tools/answer-key.mjs`
 | Hardest | People see a complex shape as the simplest form that could explain it. What is that principle called? | **Prägnanz** |
 | Hardest | Gestalt principles come from which field? | **Psychology** |
 
-## How People Think
+## Design Decisions
 
 | Level | Question | Answer |
 | --- | --- | --- |
-| Easy | People believe a beautiful interface is easier to use, even when it isn't. What is this called? | **The aesthetic usability effect** |
-| Easy | (picture) A coffee shop hands you this card with two stamps already filled in. People finish it faster than a blank 8 stamp card. Which effect? | **The goal gradient effect** |
-| Easy | (picture) This hotel app tells you how many other people booked. Which effect is it using? | **Social proof** |
-| Medium | People judge an experience mostly by its most intense moment and how it ended. What is this called? | **The peak end rule** |
-| Medium | In a list, people remember the first and last items best. What is this called? | **The serial position effect** |
-| Medium | (picture) Why does $89 feel like such a deal on this page? | **Anchoring: the first number you see sets the comparison** |
-| Hard | (picture) Which effect makes the Plus plan the one people notice and remember on this page? | **The Von Restorff effect** |
-| Hard | A half finished profile with a progress bar nags at you until you complete it. Which effect? | **The Zeigarnik effect** |
-| Hard | What do we call a person's internal picture of how a system works? | **A mental model** |
-| Hard | (picture) Why does this movie theater menu include the Medium? | **It's a decoy that makes the Large look like a bargain** |
-| Hard | (video) Watch the clip and count how many passes the players in white make. What does the clip show? | **People focused on one task often miss things they aren't looking for** |
-| Hardest | Offering too many similar options can make people choose nothing at all. What is that called? | **Choice overload** |
-| Hardest | The total mental effort needed to use an interface is called what? | **Cognitive load** |
+| Easy | Visitors must choose left or right at a corridor split. Where should direction information appear? | **Before they make the turn** |
+| Easy | Customers cannot tell whether to order or pick up at a busy counter. What should the designer clarify? | **The two actions and where each happens** |
+| Easy | A client requests a new app, but the error is in a printed appointment reminder. What should the proposal address first? | **The incorrect instructions people already receive** |
+| Medium | A menu lists 30 services with equal prominence. What's a reasonable design decision? | **Group related services and prioritize common tasks** |
+| Medium | A user-selected service is unavailable. What should the interface communicate next? | **What happened and which actions remain available** |
+| Medium | (picture) This screen gives a discount banner, survey, referral link, and task button equal attention. What should guide the redesign? | **The person's main task and the information needed to complete it** |
+| Hard | A service has many customers without smartphones. What should a proposed digital check-in include? | **A usable route for people who cannot use the app** |
+| Hard | A small organization can change a reminder today but replace hallway signs next year. What should its proposal consider? | **The impact, cost, and timing of each change** |
+| Hard | A customer needs different information at arrival and at checkout. What should determine where each detail appears? | **The decision being made at that moment** |
+| Hardest | A client wants a new directory, but research shows visitors are sent to an old building name. What should you recommend? | **Align destination names across reminders, maps, and signs** |
+| Hardest | A proposal benefits customers but doubles the steps employees must perform. What should the designer do? | **Show the tradeoff and investigate whether the new work is feasible** |
+| Hardest | A client reads a one-page recommendation. Which sentence best demonstrates design judgment? | **Visitors miss the turn before the map; move the direction cue to the entrance** |
 
 ## Affordances
 
@@ -256,22 +255,22 @@ This file is generated. After editing `bank.js`, run `node tools/answer-key.mjs`
 | Hardest | (sound) A monitor beeps faster and higher as a patient's pulse rises. Turning data into sound like this is called... | **Sonification** |
 | Hardest | (animation) Big motion like this parallax scrolling can make some people dizzy or sick. What should the site do? | **Respect the reduce motion setting and tone the motion down** |
 
-## Accessibility Standards
+## Research Synthesis
 
 | Level | Question | Answer |
 | --- | --- | --- |
-| Easy | WCAG, the most widely used set of web accessibility rules, stands for... | **Web Content Accessibility Guidelines** |
-| Easy | Software, devices and features that help disabled people use technology, like screen readers, switches and magnifiers, are called... | **Assistive technology** |
-| Easy | (picture) What do these on screen words give people watching this transit video? | **Captions: the speech and important sounds as text** |
-| Medium | Section 508 is the US law that requires accessible technology from... | **Federal agencies** |
-| Medium | WCAG has three conformance levels. Which one do most laws and policies require? | **AA** |
-| Medium | A narrated track that describes what's happening on screen for blind and low vision viewers is called... | **Audio description** |
-| Hard | In 2024, the Justice Department made WCAG 2.1 AA the rule under the ADA for which websites and apps? | **State and local governments, like cities, transit agencies and public universities** |
-| Hard | (picture) A vendor hands a city this document about its fare app. What is it? | **An accessibility conformance report, made from a VPAT** |
-| Hard | The idea that people are disabled mostly by barriers in the environment, like stairs or unlabeled buttons, rather than by their bodies, is called... | **The social model of disability** |
-| Hard | "Nothing about us without us" is a disability rights principle. For designers it means... | **Include disabled people in research and design decisions, not just as test subjects at the end** |
-| Hardest | An automated accessibility checker says your page has zero errors. What does that tell you? | **Only that it passed the checks a tool can run; many problems still need a person to test** |
-| Hardest | A keyboard user tabs into a map widget and can't tab back out. WCAG calls this a... | **Keyboard trap** |
+| Easy | Several interview notes describe people getting lost at the same hallway split. What is the shared theme? | **Uncertainty at a decision point** |
+| Easy | A team groups related sticky notes after interviews. What should the groups help them find? | **Patterns and questions worth investigating** |
+| Easy | A user mentions a confusing menu and a missing pickup sign. What is a useful synthesis question? | **Which parts of ordering and pickup create different problems?** |
+| Medium | Staff say a sign is ignored; visitors say they used it and still got lost. What belongs in the findings? | **Both accounts and the discrepancy between them** |
+| Medium | The same confusion appears in three interviews and a field observation. How should you describe it? | **A recurring issue supported by multiple sources** |
+| Medium | (picture) A journey diagram shows a sharp drop in confidence during a wait. What's a productive next step? | **Check which events or missing information produced the drop** |
+| Hard | The pantry has two clusters: confusion about item limits and fear that groceries run out. How should the team proceed? | **Define the chosen problem and show how the evidence supports it** |
+| Hard | Interviews, observations, and a client memo offer different explanations for a long queue. What should guide synthesis? | **Look for causes supported across the available evidence** |
+| Hard | Four findings all concern the moment visitors enter City Hall. What would strengthen the team's summary? | **Connect the findings to the exact decisions visitors face on arrival** |
+| Hardest | Two of six interviewees had a serious access barrier. What's the most defensible research statement? | **A consequential barrier was found, with its prevalence still uncertain** |
+| Hardest | A team finds that unclear instructions and staffing shortages both delay check-in. What should its recommendation distinguish? | **Which issues the proposed interaction can change and which need other action** |
+| Hardest | A teammate writes, Users need a more modern interface. What would make this a stronger finding? | **Specific observed difficulties and the tasks affected** |
 
 ## Figma
 
@@ -289,55 +288,56 @@ This file is generated. After editing `bank.js`, run `node tools/answer-key.mjs`
 | Hardest | Named values like color/primary that can switch between a light mode and a dark mode are Figma... | **Variables** |
 | Hardest | Figma's view for developers, for checking spacing and copying CSS from a design, is called... | **Dev Mode** |
 
-## Front End
+## Prototyping & Testing
 
 | Level | Question | Answer |
 | --- | --- | --- |
-| Easy | (picture) The widths where a responsive layout switches, here from one column to two to three, are called... | **Breakpoints** |
-| Easy | (picture) This map shows where a thumb reaches easily on a big phone. Where should a screen's main action usually go? | **Near the bottom, within easy reach** |
-| Easy | (picture) Someone clicks this to save. Why should it be a <button> instead of a <div>? | **A real button works with the keyboard and screen readers automatically** |
-| Medium | Writing the phone layout first and adding rules for bigger screens is called... | **Mobile first** |
-| Medium | (picture) What do lines 6 to 8 of this CSS do? | **Switch to two columns when the window is at least 768 pixels wide** |
-| Medium | (picture) Why connect the label to the input with for and id like this? | **Screen readers announce the label, and clicking it puts the cursor in the box** |
-| Medium | (picture) This menu opens only on mouse hover. What goes wrong on a phone or tablet? | **Touch screens have no hover, so it's hard or impossible to open** |
-| Hard | (picture) This page jumps from <h1> straight to <h4>. Why does that matter? | **Screen reader users skim by heading level and expect them in order** |
-| Hard | Which CSS unit grows when someone raises the default text size in their browser? | **rem** |
-| Hard | (picture) This search button has only a magnifying glass icon. What gives it a name screen readers can say? | **An aria-label, like aria-label="Search"** |
-| Hardest | What alt text should a purely decorative swirl image get? | **An empty alt: alt=""** |
-| Hardest | The first rule of ARIA says... | **If a native HTML element does the job, use it instead of ARIA** |
+| Easy | You need to check whether a sign belongs before a hallway split. What's a suitable first prototype? | **A paper sign placed at the decision point** |
+| Easy | What makes a prototype testable? | **Another person can attempt a meaningful task with it** |
+| Easy | (picture) Why might you start with this rough layout? | **To test structure and sequence before refining the visuals** |
+| Medium | (picture) A person clicks this disabled Continue button several times. What's the useful design question? | **What requirement is missing, and how should the interface explain it?** |
+| Medium | Which instruction is a better usability test task? | **You need a Saturday pool pass. Show me how you would get one** |
+| Medium | (picture) People repeatedly click Pay and see no response. Which state should the prototype include? | **Immediate feedback that the action was received** |
+| Hard | A form loses a user's answers when the connection fails. What should you prototype next? | **An error and recovery path that preserves entered information** |
+| Hard | You want to compare two checkout approaches. What keeps the test useful? | **Ask participants to perform the same goal under comparable conditions** |
+| Hard | You're testing a lobby navigation system. What gives better evidence than a click-through alone? | **A walkthrough with signs placed where choices happen** |
+| Hardest | Most testers complete the task, but one using a screen reader cannot. What should the team do? | **Investigate the barrier and revise the accessible interaction** |
+| Hardest | Participants finish checkout but misunderstand a required fee. What does testing show? | **Task completion and comprehension need separate evaluation** |
+| Hardest | After testing, the team moves the sign earlier and runs the task again. What is the strongest evidence of improvement? | **People now choose the right corridor with less hesitation** |
 
-## Mobility
-
-| Level | Question | Answer |
-| --- | --- | --- |
-| Easy | (picture) Why do riders wait more calmly at stops with signs like this? | **Knowing how long the wait is makes it feel shorter and less stressful** |
-| Easy | Shared scooters and e-bikes for short trips are often called... | **Micromobility** |
-| Easy | (picture) A city where daily needs are a short walk or bike ride from home is called a... | **15 minute city** |
-| Medium | Getting from home to the station, or from the station to your door, is the problem of the... | **First and last mile** |
-| Medium | (picture) Which map is easier for planning a trip, and what did its designer give up? | **Map B, by giving up real distances for straight lines and even spacing** |
-| Medium | (picture) Once you've paid as much as a weekly pass, the rest of your rides that week are free. What's this called? | **Fare capping** |
-| Medium | Vision Zero is a road safety approach with what goal? | **No traffic deaths or serious injuries** |
-| Hard | (picture) At this intersection, all cars stop and people can cross every way, even diagonally. What's it called? | **A pedestrian scramble** |
-| Hard | The time between buses on the same route is called... | **Headway** |
-| Hard | Door to door rides for people whose disability keeps them from using regular bus routes are called... | **Paratransit** |
-| Hardest | Planning, booking and paying for buses, bikes, scooters and rides in a single app is called... | **Mobility as a Service** |
-| Hardest | GTFS, the data format that lets trip planning apps show bus schedules, is... | **An open format agencies publish their routes, stops and times in** |
-
-## Public Space
+## Fieldwork & Observation
 
 | Level | Question | Answer |
 | --- | --- | --- |
-| Easy | (picture) Armrests that split a bench so nobody can lie down, and spikes on ledges, are called... | **Hostile architecture** |
-| Easy | (picture) A parking space turned into a small public seating area is called a... | **Parklet** |
-| Easy | A city's 311 line or app is for... | **Non emergency requests, like potholes and broken streetlights** |
-| Medium | Places outside home and work where people gather, like cafés, libraries and barbershops, are called... | **Third places** |
-| Medium | (picture) Paint, planters and posts claim this corner for people, cheaply and for now. What is this approach called? | **Tactical urbanism** |
-| Medium | Jane Jacobs argued busy sidewalks are safer because of... | **Eyes on the street** |
-| Hard | William Whyte filmed New York plazas to see what made people stay. Which cheap feature mattered most? | **Places to sit, especially chairs people could move** |
-| Hard | Residents vote directly on how to spend part of a city's budget. That's called... | **Participatory budgeting** |
-| Hard | Which architect studied public life by counting and watching people, and wrote Life Between Buildings? | **Jan Gehl** |
-| Hardest | A live virtual model of a city, fed by sensor data and used to test plans, is called a... | **Digital twin** |
-| Hardest | Sidewalk Labs' smart neighborhood plan for Toronto's waterfront drew the most criticism over... | **How it would collect and control data about people in public space** |
+| Easy | You watch four customers look around before finding the coffee pickup shelf. What have you recorded? | **Observed hesitation before pickup** |
+| Easy | (picture) People cut across this lawn instead of using the paved path. What should you investigate first? | **Where they start, where they go, and why this route helps** |
+| Easy | A building directory hangs behind the line at check-in. What is useful to record during a visit? | **Where people stand when they need directions** |
+| Medium | Visitors pause at a corridor split. Which field note is the most useful? | **Three visitors stopped, scanned both corridors, then asked a guard** |
+| Medium | Two people complete the same task by different routes. What should you compare? | **Their decision points, cues, delays, and recovery steps** |
+| Medium | A visitor points at a lobby map, turns around, and heads the wrong way. What should you document? | **The map's orientation, the visitor's position, and the turn taken** |
+| Hard | You observe a bus stop only during a quiet Sunday afternoon. What limits your findings? | **The experience may differ during weekday rush hour** |
+| Hard | You want to learn why users struggle at a ticket machine. Which approach gives the strongest direct evidence? | **Watch people attempt a real ticket purchase and note where they pause** |
+| Hard | A sign works well in a mockup but visitors miss it in the hallway. What should you examine? | **Sight lines, walking direction, competing signs, and viewing distance** |
+| Hardest | Staff say the signs are clear, yet six visitors ask for directions. What should you do? | **Observe the route and compare what staff and visitors encounter** |
+| Hardest | (picture) This persona was drafted before any observation or interviews. What makes it useful for design research? | **Checking its claims against actual user behavior and interviews** |
+| Hardest | Two shoppers hesitate at the same shelf, but one is looking for prices and the other for allergies. What should you conclude? | **The same visible hesitation may have different causes** |
+
+## Evidence or Assumption?
+
+| Level | Question | Answer |
+| --- | --- | --- |
+| Easy | A researcher notes: Three riders asked the driver where to transfer. What kind of statement is this? | **An observation** |
+| Easy | A manager says, People never read our signs. What is this statement? | **A claim that needs supporting evidence** |
+| Easy | (picture) This Continue button looks inactive. What can you establish from the screenshot alone? | **The button appears disabled** |
+| Medium | Five participants failed to find a pickup counter. Which conclusion is justified? | **Those five struggled during the observed tasks** |
+| Medium | (picture) These menu labels say Solutions, Resources, Explore, and More. Which statement is an observation? | **The labels use broad category names** |
+| Medium | Which field note best separates evidence from interpretation? | **A visitor tried Door B twice; perhaps its handle suggests pulling** |
+| Hard | Eight survey respondents say they would use a new kiosk. What evidence do you have? | **Their stated intention, which may differ from actual use** |
+| Hard | A client asks for an app because the counter line is long. What's the status of the app idea? | **A proposed solution whose effect still needs to be tested** |
+| Hard | Interviews say the directions are clear, but observation shows wrong turns. What should a researcher do? | **Keep both findings and investigate the difference** |
+| Hardest | A website poll reports 90% approval from eight voluntary responses. What is the main limitation? | **The small, self-selected sample may not represent all users** |
+| Hardest | A generated research summary cites complaints that appear nowhere in the supplied notes. What's the right next step? | **Check each claim against the original evidence before using it** |
+| Hardest | A screen recording shows an error after payment. Which claim goes beyond the available evidence? | **All payments made through this service will fail** |
 
 ## Building for the Web
 
@@ -377,7 +377,7 @@ This file is generated. After editing `bank.js`, run `node tools/answer-key.mjs`
 | UX Laws | Under the Doherty threshold, a system should respond within about how many milliseconds to keep people engaged? | **400** |
 | Accessibility | What contrast ratio does WCAG AA require for normal sized body text? | **4.5 to 1** |
 | Wayfinding & Cities | Kevin Lynch studied three American cities for The Image of the City. Which was NOT one of them? | **Chicago** |
-| How People Think | In the famous jam study, shoppers saw either 24 flavors or 6. Which display led to more purchases? | **The 6 flavor display** |
+| Design Decisions | A clinic requests new lobby signs. Patients keep arriving at the wrong building because their reminders use an old name. What's the strongest first change? | **Correct the reminder and align the wayfinding labels** |
 | Usability | Which of Jakob Nielsen's ten usability heuristics comes first on the list? | **Visibility of system status** |
 | Maps & Flows | The Design Council's double diamond runs discover, define, develop and... | **Deliver** |
 | Affordances | The Design of Everyday Things first came out under another title, The Psychology of Everyday Things. In what year? | **1988** |
