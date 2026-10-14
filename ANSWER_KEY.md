@@ -256,6 +256,89 @@ This file is generated. After editing `bank.js`, run `node tools/answer-key.mjs`
 | Hardest | (sound) A monitor beeps faster and higher as a patient's pulse rises. Turning data into sound like this is called... | **Sonification** |
 | Hardest | (animation) Big motion like this parallax scrolling can make some people dizzy or sick. What should the site do? | **Respect the reduce motion setting and tone the motion down** |
 
+## Accessibility Standards
+
+| Level | Question | Answer |
+| --- | --- | --- |
+| Easy | WCAG, the most widely used set of web accessibility rules, stands for... | **Web Content Accessibility Guidelines** |
+| Easy | Software, devices and features that help disabled people use technology, like screen readers, switches and magnifiers, are called... | **Assistive technology** |
+| Easy | (picture) What do these on screen words give people watching this transit video? | **Captions: the speech and important sounds as text** |
+| Medium | Section 508 is the US law that requires accessible technology from... | **Federal agencies** |
+| Medium | WCAG has three conformance levels. Which one do most laws and policies require? | **AA** |
+| Medium | A narrated track that describes what's happening on screen for blind and low vision viewers is called... | **Audio description** |
+| Hard | In 2024, the Justice Department made WCAG 2.1 AA the rule under the ADA for which websites and apps? | **State and local governments, like cities, transit agencies and public universities** |
+| Hard | (picture) A vendor hands a city this document about its fare app. What is it? | **An accessibility conformance report, made from a VPAT** |
+| Hard | The idea that people are disabled mostly by barriers in the environment, like stairs or unlabeled buttons, rather than by their bodies, is called... | **The social model of disability** |
+| Hard | "Nothing about us without us" is a disability rights principle. For designers it means... | **Include disabled people in research and design decisions, not just as test subjects at the end** |
+| Hardest | An automated accessibility checker says your page has zero errors. What does that tell you? | **Only that it passed the checks a tool can run; many problems still need a person to test** |
+| Hardest | A keyboard user tabs into a map widget and can't tab back out. WCAG calls this a... | **Keyboard trap** |
+
+## Figma
+
+| Level | Question | Answer |
+| --- | --- | --- |
+| Easy | In Figma, the container you draw a screen inside, with its own size, fill and layout settings, is a... | **Frame** |
+| Easy | Figma's online whiteboard for sticky notes, workshops and affinity mapping is called... | **FigJam** |
+| Easy | (picture) In the layers panel, what does the purple four diamond icon next to Button mean? | **It's a main component** |
+| Medium | (picture) This Button has a single hollow diamond. It's a linked copy of a main component, called... | **An instance** |
+| Medium | (animation) The frame adds even gaps between buttons and grows when you add one. Which Figma feature? | **Auto layout** |
+| Medium | One component with options like size small or large and state default or pressed is a set of... | **Variants** |
+| Hard | (picture) When the frame stretches, the Next button stays pinned to the bottom right. Which setting does that? | **Constraints** |
+| Hard | (picture) What do these blue arrows between screens in Figma's Prototype tab set up? | **Interactions: what happens on a tap and which screen comes next** |
+| Hard | Smart animate moves layers smoothly between two screens by matching their... | **Layer names** |
+| Hardest | Named values like color/primary that can switch between a light mode and a dark mode are Figma... | **Variables** |
+| Hardest | Figma's view for developers, for checking spacing and copying CSS from a design, is called... | **Dev Mode** |
+
+## Front End
+
+| Level | Question | Answer |
+| --- | --- | --- |
+| Easy | (picture) The widths where a responsive layout switches, here from one column to two to three, are called... | **Breakpoints** |
+| Easy | (picture) This map shows where a thumb reaches easily on a big phone. Where should a screen's main action usually go? | **Near the bottom, within easy reach** |
+| Easy | (picture) Someone clicks this to save. Why should it be a <button> instead of a <div>? | **A real button works with the keyboard and screen readers automatically** |
+| Medium | Writing the phone layout first and adding rules for bigger screens is called... | **Mobile first** |
+| Medium | (picture) What do lines 6 to 8 of this CSS do? | **Switch to two columns when the window is at least 768 pixels wide** |
+| Medium | (picture) Why connect the label to the input with for and id like this? | **Screen readers announce the label, and clicking it puts the cursor in the box** |
+| Medium | (picture) This menu opens only on mouse hover. What goes wrong on a phone or tablet? | **Touch screens have no hover, so it's hard or impossible to open** |
+| Hard | (picture) This page jumps from <h1> straight to <h4>. Why does that matter? | **Screen reader users skim by heading level and expect them in order** |
+| Hard | Which CSS unit grows when someone raises the default text size in their browser? | **rem** |
+| Hard | (picture) This search button has only a magnifying glass icon. What gives it a name screen readers can say? | **An aria-label, like aria-label="Search"** |
+| Hardest | What alt text should a purely decorative swirl image get? | **An empty alt: alt=""** |
+| Hardest | The first rule of ARIA says... | **If a native HTML element does the job, use it instead of ARIA** |
+
+## Mobility
+
+| Level | Question | Answer |
+| --- | --- | --- |
+| Easy | (picture) Why do riders wait more calmly at stops with signs like this? | **Knowing how long the wait is makes it feel shorter and less stressful** |
+| Easy | Shared scooters and e-bikes for short trips are often called... | **Micromobility** |
+| Easy | (picture) A city where daily needs are a short walk or bike ride from home is called a... | **15 minute city** |
+| Medium | Getting from home to the station, or from the station to your door, is the problem of the... | **First and last mile** |
+| Medium | (picture) Which map is easier for planning a trip, and what did its designer give up? | **Map B, by giving up real distances for straight lines and even spacing** |
+| Medium | (picture) Once you've paid as much as a weekly pass, the rest of your rides that week are free. What's this called? | **Fare capping** |
+| Medium | Vision Zero is a road safety approach with what goal? | **No traffic deaths or serious injuries** |
+| Hard | (picture) At this intersection, all cars stop and people can cross every way, even diagonally. What's it called? | **A pedestrian scramble** |
+| Hard | The time between buses on the same route is called... | **Headway** |
+| Hard | Door to door rides for people whose disability keeps them from using regular bus routes are called... | **Paratransit** |
+| Hardest | Planning, booking and paying for buses, bikes, scooters and rides in a single app is called... | **Mobility as a Service** |
+| Hardest | GTFS, the data format that lets trip planning apps show bus schedules, is... | **An open format agencies publish their routes, stops and times in** |
+
+## Public Space
+
+| Level | Question | Answer |
+| --- | --- | --- |
+| Easy | (picture) Armrests that split a bench so nobody can lie down, and spikes on ledges, are called... | **Hostile architecture** |
+| Easy | (picture) A parking space turned into a small public seating area is called a... | **Parklet** |
+| Easy | A city's 311 line or app is for... | **Non emergency requests, like potholes and broken streetlights** |
+| Medium | Places outside home and work where people gather, like cafés, libraries and barbershops, are called... | **Third places** |
+| Medium | (picture) Paint, planters and posts claim this corner for people, cheaply and for now. What is this approach called? | **Tactical urbanism** |
+| Medium | Jane Jacobs argued busy sidewalks are safer because of... | **Eyes on the street** |
+| Hard | William Whyte filmed New York plazas to see what made people stay. Which cheap feature mattered most? | **Places to sit, especially chairs people could move** |
+| Hard | Residents vote directly on how to spend part of a city's budget. That's called... | **Participatory budgeting** |
+| Hard | Which architect studied public life by counting and watching people, and wrote Life Between Buildings? | **Jan Gehl** |
+| Hardest | A live virtual model of a city, fed by sensor data and used to test plans, is called a... | **Digital twin** |
+| Hardest | Sidewalk Labs' smart neighborhood plan for Toronto's waterfront drew the most criticism over... | **How it would collect and control data about people in public space** |
+
 ## Building for the Web
 
 | Level | Question | Answer |

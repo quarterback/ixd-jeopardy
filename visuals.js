@@ -1024,3 +1024,249 @@ const SVG_PARALLAX = svg480(`
   <g fill="#2f5a36">${Array.from({ length: 12 }, (_, i) => `<path d="M${-120 + i * 90} 320 l18 -70 l18 70 z"/>`).join("")}
     <animateTransform attributeName="transform" type="translate" values="0 0; -320 0; 0 0" dur="4s" repeatCount="indefinite"/></g>
   <rect x="150" y="130" width="180" height="56" rx="10" fill="#1d1f27" opacity="0.8"/><text x="240" y="166" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">Visit the Rockies</text>`);
+
+/* ---------- Figma ---------- */
+// A design tool canvas: grey canvas, white frames, blue selection.
+const FIG_PURPLE = "#9747ff", FIG_BLUE = "#0d99ff", FIG_PINK = "#f24e8c";
+function diamonds(x, y, s, hollow) {
+  const d = (cx, cy) => `<path d="M${cx} ${cy - s} L${cx + s} ${cy} L${cx} ${cy + s} L${cx - s} ${cy} Z" fill="${hollow ? "none" : FIG_PURPLE}" stroke="${FIG_PURPLE}" stroke-width="${hollow ? 2 : 0}"/>`;
+  return hollow ? d(x, y) : d(x, y - s - 1) + d(x + s + 1, y) + d(x, y + s + 1) + d(x - s - 1, y);
+}
+const SVG_FIG_AUTOLAYOUT = svg480(`
+  <text x="80" y="58" font-size="12" fill="#6b7280">Button row</text>
+  <rect x="80" y="66" width="320" height="76" fill="#fff"/>
+  <rect x="80" y="66" width="320" height="76" fill="none" stroke="${FIG_BLUE}" stroke-width="2"/>
+  ${[["Back", 96], ["Save draft", 184], ["Publish", 300]].map(([t, x], i) => `<rect x="${x}" y="84" width="${[72, 100, 84][i]}" height="40" rx="8" fill="${i === 2 ? "#1d1f27" : "#eef0f4"}"/><text x="${x + [36, 50, 42][i]}" y="109" text-anchor="middle" font-size="13" font-weight="700" fill="${i === 2 ? "#fff" : "#1d1f27"}">${t}</text>`).join("")}
+  <g fill="${FIG_PINK}" opacity="0.55"><rect x="168" y="84" width="16" height="40"/><rect x="284" y="84" width="16" height="40"/></g>
+  <g font-size="10" font-weight="700" fill="#fff"><rect x="166" y="128" width="20" height="14" rx="3" fill="${FIG_PINK}"/><text x="176" y="139" text-anchor="middle">16</text><rect x="282" y="128" width="20" height="14" rx="3" fill="${FIG_PINK}"/><text x="292" y="139" text-anchor="middle">16</text></g>
+  <rect x="80" y="190" width="320" height="76" fill="#fff" stroke="${FIG_BLUE}" stroke-width="2" stroke-dasharray="6 4">
+    <animate attributeName="width" values="320;410;410;320" keyTimes="0;0.3;0.8;1" dur="3s" repeatCount="indefinite"/></rect>
+  ${[["Back", 96], ["Save draft", 184], ["Publish", 300]].map(([t, x], i) => `<rect x="${x}" y="208" width="${[72, 100, 84][i]}" height="40" rx="8" fill="${i === 2 ? "#1d1f27" : "#eef0f4"}"/><text x="${x + [36, 50, 42][i]}" y="233" text-anchor="middle" font-size="13" font-weight="700" fill="${i === 2 ? "#fff" : "#1d1f27"}">${t}</text>`).join("")}
+  <g opacity="0"><rect x="400" y="208" width="74" height="40" rx="8" fill="#eef0f4"/><text x="437" y="233" text-anchor="middle" font-size="13" font-weight="700" fill="#1d1f27">Share</text>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.29;0.3;0.8;0.81" dur="3s" repeatCount="indefinite"/></g>
+  <text x="80" y="292" font-size="12" fill="#6b7280">Add a button: the frame grows and keeps the 16 px gaps</text>`, "#e5e5e5");
+
+const SVG_FIG_LAYERS = svg480(`
+  <rect x="100" y="20" width="280" height="280" rx="8" fill="#fff" stroke="#d6d6d6"/>
+  <text x="120" y="50" font-size="13" font-weight="700" fill="#1d1f27">Layers</text>
+  <line x1="100" y1="62" x2="380" y2="62" stroke="#e5e5e5"/>
+  <g font-size="14" fill="#1d1f27">
+    <text x="124" y="96" font-size="16" fill="#6b7280">#</text><text x="150" y="96">Checkout screen</text>
+    <text x="144" y="136" font-size="16" fill="#6b7280">#</text><text x="170" y="136">Header</text>
+    ${diamonds(156, 170, 5)}<text x="174" y="175" fill="${FIG_PURPLE}" font-weight="700">Button</text>
+    <rect x="114" y="154" width="252" height="32" rx="4" fill="none" stroke="#f2b632" stroke-width="3"/>
+    ${diamonds(156, 212, 6, true)}<text x="174" y="217" fill="${FIG_PURPLE}">Button</text>
+    <text x="144" y="258" font-size="15" font-weight="700" fill="#6b7280">T</text><text x="170" y="258">Total: $38.00</text>
+  </g>`, "#2b2f3a");
+
+const SVG_FIG_INSTANCE = svg480(`
+  <rect x="100" y="20" width="280" height="280" rx="8" fill="#fff" stroke="#d6d6d6"/>
+  <text x="120" y="50" font-size="13" font-weight="700" fill="#1d1f27">Layers</text>
+  <line x1="100" y1="62" x2="380" y2="62" stroke="#e5e5e5"/>
+  <g font-size="14" fill="#1d1f27">
+    <text x="124" y="96" font-size="16" fill="#6b7280">#</text><text x="150" y="96">Checkout screen</text>
+    <text x="144" y="136" font-size="16" fill="#6b7280">#</text><text x="170" y="136">Header</text>
+    ${diamonds(156, 170, 6, true)}<text x="174" y="175" fill="${FIG_PURPLE}">Button</text>
+    <rect x="114" y="154" width="252" height="32" rx="4" fill="none" stroke="#f2b632" stroke-width="3"/>
+    <text x="144" y="216" font-size="15" font-weight="700" fill="#6b7280">T</text><text x="170" y="216">Total: $38.00</text>
+  </g>`, "#2b2f3a");
+
+const SVG_FIG_CONSTRAINTS = svg480(`
+  <rect x="30" y="60" width="150" height="220" fill="#fff"/>
+  <rect x="30" y="60" width="150" height="34" fill="#1f4e79"/>
+  <rect x="104" y="230" width="64" height="34" rx="8" fill="#1d1f27"/><text x="136" y="252" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Next</text>
+  <rect x="220" y="60" width="240" height="220" fill="#fff"/>
+  <rect x="220" y="60" width="240" height="34" fill="#1f4e79"/>
+  <rect x="384" y="230" width="64" height="34" rx="8" fill="#1d1f27"/><text x="416" y="252" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Next</text>
+  <g stroke="${FIG_BLUE}" stroke-width="2" stroke-dasharray="4 3"><line x1="168" y1="247" x2="180" y2="247"/><line x1="136" y1="264" x2="136" y2="280"/><line x1="448" y1="247" x2="460" y2="247"/><line x1="416" y1="264" x2="416" y2="280"/></g>
+  <g font-size="12" fill="#6b7280"><text x="30" y="48">Frame at 150 wide</text><text x="220" y="48">Same frame stretched to 240</text></g>
+  <path d="M186 170 h24" stroke="#6b7280" stroke-width="3"/><path d="M210 170 l-8 -6 v12 z" fill="#6b7280"/>`, "#e5e5e5");
+
+const SVG_FIG_PROTO = svg480(`
+  ${[[30, "Cart"], [180, "Checkout"], [330, "Done"]].map(([x, t]) => `<text x="${x}" y="50" font-size="12" fill="#6b7280">${t}</text><rect x="${x}" y="58" width="120" height="220" rx="6" fill="#fff"/>
+    <rect x="${x + 10}" y="74" width="100" height="10" rx="3" fill="#c4c8d0"/><rect x="${x + 10}" y="92" width="70" height="8" rx="3" fill="#e3e6ec"/><rect x="${x + 10}" y="236" width="100" height="26" rx="6" fill="#1d1f27"/>`).join("")}
+  <g fill="none" stroke="${FIG_BLUE}" stroke-width="3">
+    <path d="M140 249 C 160 249, 160 150, 180 150"/><path d="M290 249 C 310 249, 310 150, 330 150"/>
+  </g>
+  <circle cx="140" cy="249" r="5" fill="#fff" stroke="${FIG_BLUE}" stroke-width="3"/><circle cx="290" cy="249" r="5" fill="#fff" stroke="${FIG_BLUE}" stroke-width="3"/>
+  <path d="M180 150 l-9 -5 v10 z M330 150 l-9 -5 v10 z" fill="${FIG_BLUE}"/>
+  <rect x="150" y="286" width="180" height="24" rx="4" fill="#fff"/><text x="160" y="302" font-size="11" fill="#1d1f27">On tap → Navigate to · Smart animate</text>`, "#e5e5e5");
+
+/* ---------- Code on screen ---------- */
+// A code editor. Each line is [text, color]; use "" for a blank line.
+function code(lines, file) {
+  const colors = { tag: "#7fb4e8", attr: "#f2b632", str: "#9fd3a8", key: "#c9a7f0", txt: "#e8eaf0", dim: "#7d8494" };
+  return `<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img">
+  <rect width="480" height="320" fill="#151821"/>
+  <rect width="480" height="30" fill="#232733"/><text x="16" y="20" font-family="Arial, sans-serif" font-size="12" fill="#c9ccd3">${file || ""}</text>
+  <g font-family="Courier New, monospace" font-size="16">
+    ${lines.map((ln, i) => `<text x="16" y="${62 + i * 26}" fill="#4b5263">${i + 1}</text><text x="48" y="${62 + i * 26}" xml:space="preserve">${(Array.isArray(ln) ? ln : [[ln, "txt"]]).map(([t, c]) => `<tspan fill="${colors[c] || c}">${t.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</tspan>`).join("")}</text>`).join("")}
+  </g></svg>`;
+}
+const SVG_MEDIAQ = code([
+  [[".cards", "key"], [" {", "txt"]],
+  [["  display: ", "txt"], ["grid", "str"], [";", "txt"]],
+  [["  grid-template-columns: ", "txt"], ["1fr", "str"], [";", "txt"]],
+  [["}", "txt"]],
+  "",
+  [["@media", "tag"], [" (", "txt"], ["min-width: 768px", "attr"], [") {", "txt"]],
+  [["  .cards", "key"], [" { grid-template-columns: ", "txt"], ["1fr 1fr", "str"], ["; }", "txt"]],
+  [["}", "txt"]]
+], "styles.css");
+const SVG_LABELFOR = code([
+  [["<", "tag"], ["label", "tag"], [" for", "attr"], ["=", "txt"], ['"email"', "str"], [">", "tag"], ["Email", "txt"], ["</label>", "tag"]],
+  [["<", "tag"], ["input", "tag"], [" id", "attr"], ["=", "txt"], ['"email"', "str"], [" type", "attr"], ["=", "txt"], ['"email"', "str"], [">", "tag"]]
+], "signup.html");
+const SVG_HEADINGS = code([
+  [["<h1>", "tag"], ["Library hours", "txt"], ["</h1>", "tag"]],
+  [["<h4>", "tag"], ["Main branch", "txt"], ["</h4>", "tag"]],
+  [["<p>", "tag"], ["Open 9 to 8 every day.", "txt"], ["</p>", "tag"]],
+  [["<h4>", "tag"], ["Eastside branch", "txt"], ["</h4>", "tag"]],
+  [["<p>", "tag"], ["Closed Sundays.", "txt"], ["</p>", "tag"]]
+], "hours.html");
+const SVG_DIVBUTTON = code([
+  [["<", "tag"], ["div", "tag"], [" class", "attr"], ["=", "txt"], ['"btn"', "str"], [" onclick", "attr"], ["=", "txt"], ['"save()"', "str"], [">", "tag"]],
+  [["  Save", "txt"]],
+  [["</div>", "tag"]]
+], "editor.html");
+const SVG_ICONBTN = (function () {
+  const inner = code([
+    [["<", "tag"], ["button", "tag"], [">", "tag"]],
+    [["  <", "tag"], ["svg", "tag"], [" ...", "dim"], [">", "tag"], ["<!-- magnifying glass -->", "dim"]],
+    [["</button>", "tag"]]
+  ], "header.html");
+  return inner.replace("</svg>", `<g transform="translate(380 230)"><circle cx="0" cy="0" r="22" fill="none" stroke="#e8eaf0" stroke-width="6"/><path d="M15 15 l22 22" stroke="#e8eaf0" stroke-width="8" stroke-linecap="round"/></g></svg>`);
+})();
+
+/* ---------- Responsive design ---------- */
+const SVG_BREAKPOINTS = svg480(`
+  <rect x="24" y="70" width="90" height="170" rx="12" fill="#0d0f14"/><rect x="30" y="80" width="78" height="150" rx="4" fill="#fbfbfd"/>
+  ${[0, 1, 2].map(i => `<rect x="36" y="${88 + i * 46}" width="66" height="40" rx="3" fill="#7fb4e8"/>`).join("")}
+  <rect x="140" y="60" width="140" height="190" rx="10" fill="#0d0f14"/><rect x="148" y="70" width="124" height="170" rx="3" fill="#fbfbfd"/>
+  ${[0, 1, 2, 3].map(i => `<rect x="${154 + (i % 2) * 58}" y="${78 + Math.floor(i / 2) * 60}" width="54" height="54" rx="3" fill="#7fb4e8"/>`).join("")}
+  <rect x="300" y="60" width="160" height="110" rx="6" fill="#0d0f14"/><rect x="306" y="66" width="148" height="96" rx="2" fill="#fbfbfd"/><rect x="350" y="170" width="60" height="10" fill="#0d0f14"/><rect x="330" y="180" width="100" height="6" rx="3" fill="#0d0f14"/>
+  ${[0, 1, 2].map(i => `<rect x="${312 + i * 47}" y="74" width="42" height="80" rx="2" fill="#7fb4e8"/>`).join("")}
+  <g font-size="14" fill="#c9ccd3" text-anchor="middle"><text x="69" y="268">under 600 px</text><text x="210" y="276">600 to 1024 px</text><text x="380" y="210">over 1024 px</text></g>
+  <g font-size="14" font-weight="700" fill="#f2b632" text-anchor="middle"><text x="127" y="160">|</text><text x="290" y="160">|</text></g>`);
+
+const SVG_THUMBZONE = phone(`
+  <defs><radialGradient id="thumb" cx="0.75" cy="1" r="1"><stop offset="0" stop-color="#2fbf71"/><stop offset="0.55" stop-color="#2fbf71"/><stop offset="0.75" stop-color="#f2b632"/><stop offset="1" stop-color="#e0544a"/></radialGradient></defs>
+  <rect x="148" y="18" width="184" height="284" rx="16" fill="url(#thumb)" opacity="0.75"/>
+  <g font-size="11" font-weight="700" fill="#1d1f27" text-anchor="middle"><text x="240" y="50">Hard</text><text x="240" y="150">OK</text><text x="270" y="260">Easy</text></g>
+  <ellipse cx="320" cy="300" rx="24" ry="40" fill="#c98f6b" opacity="0.8" transform="rotate(-30 320 300)"/>`);
+
+const SVG_HOVERMENU = browser(`
+  <rect x="14" y="40" width="452" height="34" fill="#1d1f27"/>
+  <g font-size="13" fill="#fff"><text x="40" y="62" font-weight="700">Parks</text><text x="160" y="62">Programs ▾</text><text x="270" y="62">Permits</text><text x="350" y="62">Contact</text></g>
+  <rect x="150" y="74" width="140" height="110" fill="#fff" stroke="#dfe3ea"/>
+  <g font-size="12" fill="#1d1f27"><text x="164" y="100">Swim lessons</text><text x="164" y="126">Summer camps</text><text x="164" y="152">Adult sports</text></g>
+  <path d="M200 58 l0 16 l5 -4 l3 7 l3 -1 l-3 -7 l6 0 z" fill="#fff" stroke="#1d1f27"/>
+  <text x="300" y="120" font-size="12" fill="#6b7280">Opens on mouse hover</text>`, "parks.example.gov");
+
+/* ---------- Transit and mobility ---------- */
+const SVG_BECK = svg480(`
+  <rect x="10" y="10" width="225" height="300" rx="8" fill="#f3f1ea"/>
+  <g fill="none" stroke-width="5" stroke-linecap="round">
+    <path d="M30 60 C 70 90, 90 70, 120 130 S 170 230, 220 250" stroke="#e0544a"/>
+    <path d="M40 260 C 80 210, 100 170, 120 130 S 150 60, 210 40" stroke="#2f7de1"/>
+    <path d="M25 170 C 60 160, 90 140, 120 130 S 190 150, 225 120" stroke="#2fbf71"/>
+  </g>
+  ${[[52, 76], [120, 130], [180, 214], [70, 214], [170, 70], [60, 162], [190, 140]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#fff" stroke="#1d1f27" stroke-width="2"/>`).join("")}
+  <text x="122" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Map A</text>
+  <rect x="245" y="10" width="225" height="300" rx="8" fill="#f3f1ea"/>
+  <g fill="none" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M265 70 L310 70 L357 117 L357 190 L440 190" stroke="#e0544a"/>
+    <path d="M285 260 L357 188 L357 117 L410 64 L455 64" stroke="#2f7de1"/>
+    <path d="M260 150 L455 150" stroke="#2fbf71"/>
+  </g>
+  ${[[290, 70], [357, 150], [400, 190], [320, 225], [420, 64], [300, 150], [420, 150]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#fff" stroke="#1d1f27" stroke-width="2"/>`).join("")}
+  <text x="357" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Map B</text>`, "#2b2f3a");
+
+const SVG_BUSSIGN = svg480(`
+  <rect width="480" height="320" fill="#8fc0dd"/><rect y="250" width="480" height="70" fill="#9aa1ad"/>
+  <rect x="226" y="40" width="10" height="230" fill="#6b7280"/>
+  <rect x="90" y="40" width="282" height="130" rx="8" fill="#14161c"/>
+  <g font-family="Courier New, monospace" font-weight="700" font-size="19" fill="#f2b632">
+    <text x="106" y="76">4 Downtown</text><text x="356" y="76" text-anchor="end">3 min</text>
+    <text x="106" y="110">4 Downtown</text><text x="356" y="110" text-anchor="end">15 min</text>
+    <text x="106" y="144">22 Airport</text><text x="356" y="144" text-anchor="end">8 min</text>
+  </g>
+  <rect x="290" y="190" width="40" height="64" rx="8" fill="#3a3f4c"/><circle cx="310" cy="178" r="12" fill="#3a3f4c"/>`);
+
+const SVG_FARECAP = svg480(`
+  <text x="40" y="40" font-size="15" font-weight="700" fill="#eef1ff">What a rider pays in one week</text>
+  <line x1="60" y1="270" x2="450" y2="270" stroke="#9aa1ad" stroke-width="2"/><line x1="60" y1="60" x2="60" y2="270" stroke="#9aa1ad" stroke-width="2"/>
+  <line x1="60" y1="120" x2="450" y2="120" stroke="#f2b632" stroke-width="2" stroke-dasharray="6 5"/>
+  <text x="70" y="112" font-size="12" font-weight="700" fill="#f2b632">Weekly pass price: $25</text>
+  ${Array.from({ length: 14 }, (_, i) => { const paid = Math.min((i + 1) * 2.5, 25); const h = paid / 25 * 150; return `<rect x="${70 + i * 27}" y="${270 - h}" width="20" height="${h}" fill="${(i + 1) * 2.5 > 25 ? "#2fbf71" : "#7fb4e8"}"/>`; }).join("")}
+  <text x="255" y="294" text-anchor="middle" font-size="12" fill="#c9ccd3">Rides 1 to 14, at $2.50 each</text>
+  <text x="395" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#2fbf71">Rides 11 to 14 are free</text>`);
+
+const SVG_SCRAMBLE = svg480(`
+  <rect width="480" height="320" fill="#5d636e"/>
+  <g fill="#c9ccd3"><rect x="0" y="0" width="150" height="90"/><rect x="330" y="0" width="150" height="90"/><rect x="0" y="230" width="150" height="90"/><rect x="330" y="230" width="150" height="90"/></g>
+  <g fill="#fff">${Array.from({ length: 8 }, (_, i) => `<rect x="${160 + i * 21}" y="94" width="12" height="28"/><rect x="${160 + i * 21}" y="198" width="12" height="28"/><rect x="154" y="${128 + i * 0}" width="0" height="0"/>`).join("")}
+    ${Array.from({ length: 5 }, (_, i) => `<rect x="152" y="${108 + i * 22}" width="28" height="12"/><rect x="300" y="${108 + i * 22}" width="28" height="12"/>`).join("")}</g>
+  <g stroke="#f2b632" stroke-width="4" stroke-dasharray="10 8" fill="none"><path d="M150 90 L330 230"/><path d="M330 90 L150 230"/></g>
+  <g fill="#1d1f27">${[[200, 130], [280, 130], [240, 160], [210, 190], [270, 195], [170, 110], [310, 205]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7"/>`).join("")}</g>
+  <g>${[[50, 160, 0], [430, 160, 180]].map(([x, y, r]) => `<rect x="${x - 30}" y="${y - 14}" width="60" height="28" rx="6" fill="#e0544a" transform="rotate(${r} ${x} ${y})"/>`).join("")}</g>
+  <rect x="226" y="10" width="28" height="64" rx="5" fill="#14161c"/><circle cx="240" cy="26" r="8" fill="#e0544a"/><circle cx="240" cy="42" r="8" fill="#3a3f4c"/><circle cx="240" cy="58" r="8" fill="#3a3f4c"/>`);
+
+const SVG_15MIN = svg480(`
+  <circle cx="240" cy="160" r="130" fill="#2fbf71" opacity="0.18" stroke="#2fbf71" stroke-width="3" stroke-dasharray="8 6"/>
+  <path d="M222 168 l18 -16 l18 16 v20 h-36 z" fill="#eef1ff"/>
+  ${[["🛒", 0], ["🏫", 1], ["🏥", 2], ["🌳", 3], ["📚", 4], ["☕", 5], ["🚌", 6], ["💼", 7]].map(([e, i]) => { const a = i / 8 * Math.PI * 2; return `<text x="${240 + Math.cos(a) * 95}" y="${168 + Math.sin(a) * 95}" text-anchor="middle" font-size="30">${e}</text>`; }).join("")}
+  <text x="240" y="306" text-anchor="middle" font-size="13" fill="#c9ccd3">A short walk or bike ride from home</text>`);
+
+/* ---------- Public space ---------- */
+const SVG_HOSTILE = svg480(`
+  <rect width="480" height="320" fill="#c9ccd3"/><rect y="230" width="480" height="90" fill="#9aa1ad"/>
+  <rect x="70" y="170" width="340" height="18" rx="4" fill="#6b4a2f"/>
+  <rect x="90" y="188" width="14" height="60" fill="#3a3f4c"/><rect x="376" y="188" width="14" height="60" fill="#3a3f4c"/>
+  ${[150, 240, 330].map(x => `<path d="M${x - 10} 170 v-26 a10 10 0 0 1 20 0 v26 z" fill="#3a3f4c"/>`).join("")}
+  <g fill="#6b7280">${Array.from({ length: 14 }, (_, i) => `<path d="M${40 + i * 30} 300 l8 -22 l8 22 z"/>`).join("")}</g>`);
+
+const SVG_TACTICAL = svg480(`
+  <rect width="480" height="320" fill="#5d636e"/>
+  <path d="M0 0 H200 V120 H0 Z" fill="#c9ccd3"/><path d="M280 0 H480 V120 H280 Z" fill="#c9ccd3"/>
+  <path d="M0 120 H200 C 200 170, 170 190, 120 200 H0 Z" fill="#7fd1c0"/>
+  <g fill="#f2b632">${Array.from({ length: 9 }, (_, i) => `<circle cx="${20 + i * 22}" cy="${150 + (i % 3) * 14}" r="6"/>`).join("")}</g>
+  ${[[40, 210], [100, 206], [160, 186]].map(([x, y]) => `<rect x="${x - 6}" y="${y - 22}" width="12" height="26" rx="5" fill="#fff"/><rect x="${x - 6}" y="${y - 18}" width="12" height="4" fill="#e0544a"/>`).join("")}
+  <rect x="30" y="126" width="40" height="22" rx="4" fill="#8a5a3a"/><circle cx="50" cy="122" r="14" fill="#4f9a5d"/>
+  <rect x="130" y="126" width="40" height="22" rx="4" fill="#8a5a3a"/><circle cx="150" cy="122" r="14" fill="#4f9a5d"/>
+  <g fill="#fff">${Array.from({ length: 6 }, (_, i) => `<rect x="${220 + i * 0}" y="${130 + i * 28}" width="40" height="14"/>`).join("")}</g>`);
+
+const SVG_PARKLET = svg480(`
+  <rect width="480" height="320" fill="#5d636e"/><rect y="0" width="480" height="110" fill="#c9ccd3"/>
+  <rect x="0" y="110" width="480" height="6" fill="#9aa1ad"/>
+  <rect x="20" y="130" width="120" height="64" rx="10" fill="#2f7de1"/><rect x="340" y="130" width="120" height="64" rx="10" fill="#e0544a"/>
+  <rect x="160" y="118" width="160" height="80" fill="#b5895a"/>
+  <g stroke="#6b4a2f" stroke-width="2">${Array.from({ length: 8 }, (_, i) => `<line x1="${160 + i * 20}" y1="118" x2="${160 + i * 20}" y2="198"/>`).join("")}</g>
+  <rect x="160" y="190" width="160" height="10" fill="#4f9a5d"/><circle cx="172" cy="188" r="10" fill="#4f9a5d"/><circle cx="308" cy="188" r="10" fill="#4f9a5d"/>
+  <rect x="190" y="136" width="36" height="24" rx="4" fill="#f3f1ea"/><rect x="250" y="136" width="36" height="24" rx="4" fill="#f3f1ea"/>
+  <circle cx="200" cy="130" r="8" fill="#1d1f27"/><circle cx="276" cy="130" r="8" fill="#1d1f27"/>
+  <g fill="#fff">${Array.from({ length: 10 }, (_, i) => `<rect x="${10 + i * 48}" y="252" width="30" height="6"/>`).join("")}</g>`);
+
+/* ---------- Accessibility standards ---------- */
+const SVG_VPAT = svg480(`
+  <rect x="20" y="20" width="440" height="280" rx="8" fill="#fbfbfd"/>
+  <text x="36" y="48" font-size="14" font-weight="700" fill="#1d1f27">Transit Fare App · WCAG 2.1 report</text>
+  <rect x="36" y="60" width="408" height="26" fill="#1f4e79"/>
+  <g font-size="11" font-weight="700" fill="#fff"><text x="44" y="77">Criteria</text><text x="230" y="77">Conformance Level</text><text x="350" y="77">Remarks</text></g>
+  ${[["1.1.1 Non-text Content", "Supports", "#2fbf71", "Icons have labels"], ["1.4.3 Contrast (Minimum)", "Partially Supports", "#f2b632", "Map legend is faint"], ["2.1.1 Keyboard", "Supports", "#2fbf71", ""], ["2.4.7 Focus Visible", "Does Not Support", "#e0544a", "No focus ring on menu"], ["3.3.1 Error Identification", "Supports", "#2fbf71", ""]].map(([c, l, col, r], i) => `
+    <rect x="36" y="${86 + i * 40}" width="408" height="40" fill="${i % 2 ? "#f0f2f6" : "#fff"}"/>
+    <text x="44" y="${110 + i * 40}" font-size="11" fill="#1d1f27">${c}</text>
+    <circle cx="236" cy="${106 + i * 40}" r="5" fill="${col}"/><text x="246" y="${110 + i * 40}" font-size="11" fill="#1d1f27">${l}</text>
+    <text x="350" y="${110 + i * 40}" font-size="10" fill="#6b7280">${r}</text>`).join("")}`);
+
+const SVG_CAPTIONS = svg480(`
+  <rect x="30" y="30" width="420" height="236" rx="8" fill="#14161c"/>
+  <rect x="30" y="30" width="420" height="236" rx="8" fill="#3d5a80" opacity="0.6"/>
+  <circle cx="190" cy="120" r="34" fill="#f0b07a"/><rect x="146" y="156" width="88" height="80" rx="30" fill="#e0544a"/>
+  <rect x="270" y="90" width="130" height="90" rx="4" fill="#eef1ff"/><path d="M286 160 l24 -30 l20 20 l14 -12 l40 22" fill="none" stroke="#3d5a80" stroke-width="4"/>
+  <rect x="96" y="200" width="288" height="44" rx="4" fill="#000" opacity="0.8"/>
+  <text x="240" y="218" text-anchor="middle" font-size="14" fill="#fff">[bus brakes hiss]</text>
+  <text x="240" y="236" text-anchor="middle" font-size="14" fill="#fff">Route 4 now stops at Liberty Street.</text>
+  <rect x="30" y="266" width="420" height="30" fill="#232733"/><path d="M46 274 l12 7 l-12 7 z" fill="#fff"/>
+  <rect x="70" y="279" width="260" height="4" rx="2" fill="#5c6270"/><rect x="70" y="279" width="110" height="4" rx="2" fill="#e0544a"/>
+  <rect x="396" y="273" width="28" height="16" rx="3" fill="#fff"/><text x="410" y="285" text-anchor="middle" font-size="10" font-weight="700" fill="#14161c">CC</text>`);
