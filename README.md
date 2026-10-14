@@ -16,10 +16,21 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 
 1. Open the site. Enter team names (six by default, up to eight).
 2. Pick **Teams answer on: Their own phones or laptops**, then the rounds and board size. Round one is 100 to 500, Double Jeopardy 200 to 1000, and the optional Triple Jeopardy 300 to 1500.
+   Under **Categories**, tap any category to leave it out of this game.
 3. Click **Draw boards and start**. The lobby shows the join address, a room code and a QR code.
 4. One captain per team goes to `yoursite.netlify.app/play`, enters the code and taps their team. The lobby ticks each team off as it joins.
 5. Anyone who wants to follow along without a team goes to `yoursite.netlify.app/watch` and enters the same code. They see your screen as it plays: the board, questions, clock, reveals, rollers and standings, on a phone or a laptop. They can't answer, and they never get the answer key or an answer before you reveal it.
 6. Click **Answer key** to open this game's answers in a separate window. Keep it off the screen you share.
+
+## Playing again with the same class
+
+The game remembers what you played, so a second game doesn't repeat the first.
+
+* **Earlier games.** The browser you host from keeps a list of every question that was played, meaning its clock started, and which categories were on the boards. That covers your last 12 games. In setup, **Questions from earlier games: Skip them** (the default) draws new questions first and puts last game's categories at the back of the line. Each category chip shows how many of its questions are still new, and a **Last game** tag marks the ones you just played. **Forget earlier games** clears the list.
+* The list lives in that browser on that computer. Host from the same browser and the same site address both times. A game that was still saved in the browser when this feature arrived counts too, as long as you never clicked **New game** on it.
+* **Change a category.** On the board, click a category name. Pick **Keep (category), draw new questions** for fresh questions in the same category, or pick a different category. A category can only switch while none of its squares has been played. Once one has, you can still redraw the squares that are left.
+* **Change a question.** After you open a square and before you start the clock, click **New question** or press **N**. It draws another question from the same category at about the same level, never one already in this game, and skips earlier games' questions while others are left. The amount stays the same, and so do wagers and Doubles. It works on Daily Doubles and Final Jeopardy too: press **R** to show the question first, then **N**. If the question came up in an earlier game, a **Played in an earlier game** chip appears next to the button.
+* The answer key window updates itself after each change. A question that was played in an earlier game is marked in the key.
 
 ## Running a square
 
@@ -29,6 +40,8 @@ The team answering feature needs that function, so it runs on Netlify only. On a
 4. Each team taps an answer and then **Lock in**. A locked answer can't change. Your screen shows "3 of 6 locked in" and "Locked in" on each card, never the letter.
 5. Press **R** to reveal. The board shows who picked what and how many points each team got. Each team's device shows its own result.
 6. The game goes back to the board on its own after a countdown (8 seconds by default, set in setup). Click **Stay here** to keep the answer up, or press **B** to go back sooner.
+
+**Pictures, clips and sounds**: some questions show a drawing, and some drawings move. Video questions show a **Play the clip** button that plays the clip right on the board, and sound questions show **Play the sound**. Teams hear them through your speakers, so on Zoom turn on **Share sound** when you share your screen. If a clip won't play, **Open on YouTube** opens it in a new tab. Starting the clock or a team locking in doesn't interrupt a clip.
 
 **Daily Doubles and the final wager**: captains type their wager on their device. Your screen shows "Wager in" without the amount. Press **R** to show the question, then **Space** for the clock.
 
@@ -77,12 +90,22 @@ Each round, every team gets one Special: a bonus question only that team answers
 | B | Back to the board |
 | S | Scoreboard |
 | P | Roll the next Special (from the board) |
+| N | New question, before the clock starts |
 | Esc | Close a panel |
 
 ## Editing questions
 
 All questions live in `bank.js`, grouped by category. Each has a level from 1 (easy) to 4 (hardest), the right answer in `a`, and three wrong answers in `w`. Answer order is shuffled every game. The board fills rows from easy to hard, so each category needs questions at every level.
 
-To show a picture, add `media: { type: "svg", svg: SVG_NAME }`. Drawings live in `visuals.js`; `phone()` and `browser()` wrap a screen in a device frame.
+To show a picture, add `media: { type: "svg", svg: SVG_NAME }`. Drawings live in `visuals.js`; `phone()` and `browser()` wrap a screen in a device frame. A drawing can move: SVG `<animate>` tags play on the board, as in the Sound & Motion drawings.
 
-`ANSWER_KEY.md` lists every question in the bank with its answer.
+Other kinds of media:
+
+| Kind | Write | Notes |
+| --- | --- | --- |
+| YouTube clip | `media: { type: "video", youtube: "VIDEO_ID", start: 30, end: 75 }` | `VIDEO_ID` is the part after `v=` in the address. `start` and `end` are seconds and optional. Add `svg: SVG_NAME` for a poster picture. |
+| Video file | `media: { type: "video", src: "media/clip.mp4" }` | Put the file in a `media` folder. |
+| Built in sound | `media: { type: "audio", sound: "success" }` | Made in the browser by `sounds.js`: `success`, `error`, `crumple`, `shutter`, `chime`, `pulse`. |
+| Sound file | `media: { type: "audio", src: "media/sound.mp3" }` | Put the file in a `media` folder. |
+
+`ANSWER_KEY.md` lists every question in the bank with its answer. It's generated: after editing `bank.js`, run `node tools/answer-key.mjs` to rebuild it.
