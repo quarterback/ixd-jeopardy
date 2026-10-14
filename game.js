@@ -27,7 +27,39 @@
 
   // ---------- storage ----------
   function load() { try { const r = localStorage.getItem(STORE); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
-  function persist() { if (WATCH) return; try { if (S) localStorage.setItem(STORE, JSON.stringify(S)); else localStorage.removeItem(STORE); } catch (e) { /* storage off */ } }
+  function persist() { if (WATCH) return; try { if (S) localStorage.setItem(STORE, JSON.stringify(S)); else localStorage.removeItem(STORE); } catch (e) { /* storage off */ } recordGame(); }
+
+  // ---------- earlier games ----------
+  // This browser remembers what each game played, so the next game can skip those questions and categories.
+  const HISTORY = "design-jeopardy-history";
+  const HISTORY_KEEP = 12;
+  function loadHistory() {
+    try { const h = JSON.parse(localStorage.getItem(HISTORY) || "null"); if (h && Array.isArray(h.games)) return h; } catch (e) { /* storage off */ }
+    return { games: [] };
+  }
+  function saveHistory(h) { try { localStorage.setItem(HISTORY, JSON.stringify(h)); } catch (e) { /* storage off */ } }
+  // A question counts as played once its clock started. Categories count once their board came up.
+  function recordGame() {
+    if (WATCH || !S || !S.rounds) return;
+    S.gameId = S.gameId || "g" + Date.now();
+    const qs = new Set(S.seenQ || []);
+    for (const key in S.res) {
+      const r = S.res[key], cell = cellAt(key);
+      if (cell && cell.q && (r.startedAt || r.revealed)) qs.add(cell.q.q);
+    }
+    const cats = [];
+    S.rounds.forEach((round, ri) => { if (ri <= S.ri) round.cols.forEach(col => { if (!cats.includes(col.cat)) cats.push(col.cat); }); });
+    const h = loadHistory();
+    const prev = h.games.find(g => g.id === S.gameId);
+    const entry = { id: S.gameId, at: (prev && prev.at) || S.startedAt || Date.now(), cats, qs: Array.from(qs) };
+    const str = JSON.stringify(entry);
+    if (prev && JSON.stringify(prev) === str) return;
+    h.games = h.games.filter(g => g.id !== S.gameId).concat(entry).sort((a, b) => a.at - b.at).slice(-HISTORY_KEEP);
+    saveHistory(h);
+  }
+  function pastGames() { const id = S && S.gameId; return loadHistory().games.filter(g => g.id !== id && (g.qs.length || g.cats.length)); }
+  function pastQs() { const s = new Set(); pastGames().forEach(g => g.qs.forEach(q => s.add(q))); return s; }
+  function lastCats() { const g = pastGames().pop(); return new Set(g ? g.cats : []); }
 
   // ---------- helpers ----------
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
@@ -77,30 +109,46 @@
   function setNetError(m) { if (m !== netError) { netError = m; const el = document.getElementById("neterr"); if (el) { el.textContent = m; el.hidden = !m; } } }
 
   // ---------- drawing the boards ----------
+  // Row k of a board asks for this level, 1 (easy) to 4 (hardest).
+  function levelFor(k, rows) { return rows === 1 ? 1 : 1 + Math.round(k * 3 / (rows - 1)); }
+  // The question nearest the target level. "avoid" is a list of sets of question texts, most important first:
+  // when nothing is left, the least important set stops counting until something is.
+  function pickQ(qs, target, avoid) {
+    let pool = [];
+    for (let n = avoid.length; n >= 0 && !pool.length; n--) pool = qs.filter(q => !avoid.slice(0, n).some(s => s.has(q.q)));
+    const best = Math.min(...pool.map(q => Math.abs(q.l - target)));
+    return shuffle(pool.filter(q => Math.abs(q.l - target) === best))[0];
+  }
+  // Questions for some rows of one category. Easier questions go to the cheaper rows.
+  function pickColumn(cat, rowsWanted, rows, avoid) {
+    const used = avoid[0], picks = [];
+    rowsWanted.forEach(k => { const p = pickQ(cat.qs, levelFor(k, rows), avoid); used.add(p.q); picks.push(p); });
+    picks.sort((a, b) => a.l - b.l);
+    return picks;
+  }
+  function bankCat(name) { return BANK.find(c => c.cat === name) || null; }
   function drawGame(cfg) {
     const used = new Set(), usedDD = new Set();
-    let catsLeft = shuffle(BANK);
+    const past = cfg.fresh === false ? new Set() : pastQs();
+    const lastC = cfg.fresh === false ? new Set() : lastCats();
+    const skip = new Set(cfg.skipCats || []);
+    const allowed = BANK.filter(c => !skip.has(c.cat));
+    // Categories from the last game go to the back of the line, and so do categories with few new questions left.
+    const fresh = c => c.qs.filter(q => !past.has(q.q)).length;
+    const order = list => shuffle(list).sort((a, b) => (lastC.has(a.cat) - lastC.has(b.cat)) || ((fresh(a) < cfg.rows) - (fresh(b) < cfg.rows)));
+    let catsLeft = order(allowed);
     const rounds = [];
     for (let r = 0; r < cfg.rounds; r++) {
-      if (catsLeft.length < cfg.cats) catsLeft = catsLeft.concat(shuffle(BANK.filter(c => !catsLeft.includes(c))));
+      if (catsLeft.length < cfg.cats) catsLeft = catsLeft.concat(order(allowed.filter(c => !catsLeft.includes(c))));
       const cats = catsLeft.splice(0, cfg.cats);
       const cols = cats.map(cat => {
-        const cells = [];
-        for (let k = 0; k < cfg.rows; k++) {
-          const target = cfg.rows === 1 ? 1 : 1 + Math.round(k * 3 / (cfg.rows - 1));
-          let pool = cat.qs.filter(q => !used.has(q.q));
-          if (!pool.length) pool = cat.qs.slice();
-          const best = Math.min(...pool.map(q => Math.abs(q.l - target)));
-          const pick = shuffle(pool.filter(q => Math.abs(q.l - target) === best))[0];
-          used.add(pick.q);
-          cells.push({ value: (k + 1) * 100 * (r + 1), dd: false, q: prep(pick, cat.cat) });
-        }
-        return { cat: cat.cat, cells };
+        const picks = pickColumn(cat, Array.from({ length: cfg.rows }, (_, k) => k), cfg.rows, [used, past]);
+        return { cat: cat.cat, cells: picks.map((pick, k) => ({ value: (k + 1) * 100 * (r + 1), dd: false, q: prep(pick, cat.cat) })) };
       });
       const ddCount = Math.min(r === 0 ? 1 : 2, DAILY_DOUBLES.length - usedDD.size);
       const spots = shuffle(cols.flatMap((col, c) => col.cells.map((cell, k) => ({ c, k }))).filter(s => s.k > 0 || cfg.rows === 1));
       for (let i = 0; i < ddCount && i < spots.length; i++) {
-        const d = shuffle(DAILY_DOUBLES.filter(x => !usedDD.has(x.q)))[0];
+        const d = pickQ(DAILY_DOUBLES.map(x => Object.assign({ l: 1 }, x)), 1, [usedDD, past]);
         usedDD.add(d.q);
         const cell = cols[spots[i].c].cells[spots[i].k];
         used.delete(cell.q.q);
@@ -109,26 +157,78 @@
       }
       rounds.push({ cols });
     }
-    const final = cfg.final && FINALS.length ? { value: 0, dd: false, final: true, q: prep(shuffle(FINALS)[0]) } : null;
-    return { rounds, final, used: Array.from(used) };
+    const final = cfg.final && FINALS.length ? { value: 0, dd: false, final: true, q: prep(pickQ(FINALS.map(x => Object.assign({ l: 1 }, x)), 1, [past])) } : null;
+    return { rounds, final, used: Array.from(used).concat(Array.from(usedDD)) };
   }
   // A Special question: any category, never a question already on a board or used for another Special.
   function drawSpecialQ() {
-    const used = new Set(S.usedQ || []);
-    let pool = [];
-    BANK.forEach(cat => cat.qs.forEach(q => { if (!used.has(q.q)) pool.push({ q, cat: cat.cat }); }));
-    if (!pool.length) BANK.forEach(cat => cat.qs.forEach(q => pool.push({ q, cat: cat.cat })));
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    S.usedQ = (S.usedQ || []).concat(pick.q.q);
-    return prep(pick.q, pick.cat);
+    const all = [];
+    BANK.forEach(cat => cat.qs.forEach(q => all.push(Object.assign({ cat: cat.cat }, q))));
+    const pick = pickQ(all.map(q => Object.assign({}, q, { l: 1 })), 1, [inGame(), gamePast()]);
+    S.usedQ = (S.usedQ || []).concat(pick.q);
+    return prep(pick, pick.cat);
+  }
+  // Every question this game has put on a board, swapped out or played.
+  function inGame() {
+    const s = new Set(S.usedQ || []);
+    (S.seenQ || []).forEach(q => s.add(q));
+    S.rounds.forEach(round => round.cols.forEach(col => col.cells.forEach(cell => s.add(cell.q.q))));
+    if (S.final) s.add(S.final.q.q);
+    return s;
+  }
+  function gamePast() { return S.cfg.fresh === false ? new Set() : pastQs(); }
+
+  // ---------- changing the board during a game ----------
+  // Give some or all of a column new questions, from the same category or a different one.
+  // Squares already played keep theirs. Daily Doubles keep theirs too; use New question on the square for those.
+  function refillColumn(ri, c, catName) {
+    const col = S.rounds[ri].cols[c], cat = bankCat(catName);
+    if (!cat) return;
+    const open = col.cells.map((cell, k) => k).filter(k => { const r = S.res[`${ri}-${c}-${k}`]; return !(r && r.done) && !col.cells[k].dd; });
+    if (!open.length) return;
+    const released = new Set(open.map(k => col.cells[k].q.q));
+    const keep = inGame();
+    released.forEach(q => { if (!(S.seenQ || []).includes(q)) keep.delete(q); });
+    // Never this game's other questions; then not ones from earlier games; then not the ones being replaced.
+    const picks = pickColumn(cat, open, S.cfg.rows, [keep, gamePast(), released]);
+    open.forEach((k, i) => { col.cells[k].q = prep(picks[i], cat.cat); });
+    S.usedQ = (S.usedQ || []).filter(q => !released.has(q) || (S.seenQ || []).includes(q)).concat(picks.map(p => p.q));
+    col.cat = cat.cat;
+  }
+  // Swap the question on the square that's open, before the clock starts. The amount stays, and so do wagers and Doubles.
+  function newQuestion() {
+    const key = S.cur, cell = cellAt(key), r = res(key);
+    if (!cell || r.revealed) return;
+    if (cell.bonus) return newSpecialQuestion();
+    if (r.startedAt) return;
+    const old = cell.q.q, avoid = [inGame(), gamePast()];
+    let pick, cat;
+    if (cell.final) {
+      pick = pickQ(FINALS.map(x => Object.assign({ l: 1 }, x)), 1, avoid);
+      if (avoid[0].has(pick.q)) { const all = []; BANK.forEach(c => c.qs.forEach(q => q.l === 4 && all.push(Object.assign({ cat: c.cat }, q)))); pick = pickQ(all, 4, avoid); }
+      cat = pick.cat;
+    } else {
+      const [ri, c, k] = key.split("-").map(Number), col = S.rounds[ri].cols[c];
+      if (cell.dd) pick = pickQ(DAILY_DOUBLES.map(x => Object.assign({ l: 1 }, x)), 1, avoid);
+      if (!pick || avoid[0].has(pick.q)) {
+        const bc = bankCat(col.cat);
+        pick = bc ? Object.assign({ cat: bc.cat }, pickQ(bc.qs, cell.dd ? 4 : levelFor(k, S.cfg.rows), avoid)) : null;
+      }
+      cat = pick && (pick.cat || col.cat);
+    }
+    if (!pick || pick.q === old) return;
+    S.seenQ = (S.seenQ || []).concat(old);
+    S.usedQ = (S.usedQ || []).concat(pick.q);
+    cell.q = prep(pick, cat);
   }
 
   // ---------- state ----------
   let S = WATCH ? null : load();
   if (S && !S.cfg) S = null;
-  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 5, secs: 25, mode: "devices", final: true, specials: true, autoBack: 8 };
+  if (S) recordGame(); // a game saved before this browser kept a history still counts as played
+  let draft = { names: ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"], rounds: 2, cats: 5, rows: 5, secs: 25, mode: "devices", final: true, specials: true, autoBack: 8, fresh: true, skipCats: [] };
   if (S) draft = Object.assign({}, draft, S.cfg, { names: S.teams.map(t => t.name) });
-  let overlay = null, confirmNew = false, setupError = "", starting = false;
+  let overlay = null, confirmNew = false, confirmForget = false, swapCol = 0, setupError = "", starting = false;
   let celebrate = null, celebrateTimer = null;
   const buzzed = {};
 
@@ -536,8 +636,9 @@
   async function startGame() {
     draft.names = draft.names.map((n, i) => n.trim() || `Team ${i + 1}`);
     const cfg = Object.assign({}, draft);
+    if (BANK.length - (cfg.skipCats || []).length < cfg.cats) { setupError = `Turn on at least ${cfg.cats} categories, or use fewer categories per board.`; render(); return; }
     const g = drawGame(cfg);
-    const next = { cfg, teams: cfg.names.map(n => ({ name: n, adj: 0, doubleUsed: null })), rounds: g.rounds, final: g.final, usedQ: g.used, ri: 0, view: "board", cur: null, picker: 0, res: {}, attempts: {}, specials: {}, specDone: {}, specCount: {}, room: null, claims: [] };
+    const next = { cfg, gameId: "g" + Date.now(), startedAt: Date.now(), teams: cfg.names.map(n => ({ name: n, adj: 0, doubleUsed: null })), rounds: g.rounds, final: g.final, usedQ: g.used, seenQ: [], ri: 0, view: "board", cur: null, picker: 0, res: {}, attempts: {}, specials: {}, specDone: {}, specCount: {}, room: null, claims: [] };
     if (cfg.mode === "devices") {
       starting = true; setupError = ""; render();
       try {
@@ -721,12 +822,38 @@
             <p class="note">Round one ${values(1)}.${draft.rounds > 1 ? ` Double Jeopardy ${values(2)}.` : ""}${draft.rounds > 2 ? ` Triple Jeopardy ${values(3)}.` : ""}</p>
           </div>
         </div>
+        ${viewCatPick()}
         ${setupError ? `<p class="msg bad">${esc(setupError)}</p>` : ""}
         <div class="row">
           <button type="submit" class="btn primary" ${starting ? "disabled" : ""}>${starting ? "Opening a room" : "Draw boards and start"}</button>
         </div>
       </form>
     </section>`;
+  }
+
+  // Which categories can be drawn, and what earlier games on this browser already played.
+  function viewCatPick() {
+    const games = pastGames(), past = pastQs(), lastC = lastCats();
+    const skip = new Set(draft.skipCats || []);
+    const fresh = draft.fresh !== false;
+    const chips = BANK.map(c => {
+      const off = skip.has(c.cat), left = c.qs.filter(q => !past.has(q.q)).length;
+      const count = games.length && fresh ? `${left} of ${c.qs.length} new` : `${c.qs.length} questions`;
+      return `<button type="button" class="catchip ${off ? "off" : ""}" data-skipcat="${esc(c.cat)}" aria-pressed="${off ? "false" : "true"}">
+        <span class="catchip-name">${esc(c.cat)}</span><small>${count}</small>${lastC.has(c.cat) ? `<span class="tagsmall">Last game</span>` : ""}</button>`;
+    }).join("");
+    const hist = games.length
+      ? `This browser remembers ${games.length === 1 ? "1 earlier game" : games.length + " earlier games"}, with ${past.size} questions played. ${fresh ? "New boards skip those questions while others are left, and put last game's categories at the back of the line." : ""} <button type="button" class="linkbtn" data-act="forget">${confirmForget ? "Click again to forget them" : "Forget earlier games"}</button>`
+      : "After you play, this browser remembers which questions came up, so the next game can skip them.";
+    return `<div class="catpick">
+      <div class="row between"><h3>Categories</h3>
+        <div class="field inline-field"><label for="fresh">Questions from earlier games</label><select id="fresh">
+          <option value="1" ${fresh ? "selected" : ""}>Skip them</option><option value="0" ${fresh ? "" : "selected"}>Allow them</option></select></div>
+      </div>
+      <p class="note">Tap a category to leave it out of this game. You can also change a category on the board before anyone plays it.</p>
+      <div class="catchips">${chips}</div>
+      <p class="note">${hist}</p>
+    </div>`;
   }
 
   const ROUND_NAMES = ["Jeopardy", "Double Jeopardy", "Triple Jeopardy"];
@@ -789,7 +916,7 @@
     return `
     <section class="board-stage">
       <div class="board" style="--cols:${round.cols.length}">
-        ${round.cols.map(col => `<div class="cat-head">${esc(col.cat)}</div>`).join("")}
+        ${round.cols.map((col, c) => WATCH ? `<div class="cat-head">${esc(col.cat)}</div>` : `<button class="cat-head" data-swapcat="${c}" title="Change this category">${esc(col.cat)}</button>`).join("")}
         ${Array.from({ length: S.cfg.rows }, (_, k) => round.cols.map((col, c) => {
           const key = `${S.ri}-${c}-${k}`;
           const isDone = S.res[key] && S.res[key].done;
@@ -901,10 +1028,64 @@
     </section>`;
   }
 
-  function viewMedia(m) { return m ? `<div class="media">${m.svg || ""}</div>` : ""; }
+  // Pictures, clips and sounds. Each one carries a key so a re-render keeps a playing clip playing.
+  function hash(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  function mediaKey(q) { return `${S.cur}-${hash(q.q)}`; }
+  function ytURL(m, embed) {
+    const t = [];
+    if (embed) { t.push("autoplay=1", "rel=0", "modestbranding=1"); if (m.start) t.push("start=" + m.start); if (m.end) t.push("end=" + m.end); }
+    else if (m.start) t.push("t=" + m.start);
+    return (embed ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(m.youtube)}` : `https://www.youtube.com/watch?v=${encodeURIComponent(m.youtube)}`) + (t.length ? (embed ? "?" : "&") + t.join("&") : "");
+  }
+  const SPEAKER = `<svg viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A speaker playing a sound">
+    <rect width="480" height="320" fill="#101a4a"/>
+    <path d="M120 130 h44 l56 -46 v152 l-56 -46 h-44 z" fill="#eef1ff"/>
+    <g fill="none" stroke="#f2b632" stroke-width="12" stroke-linecap="round" class="waves">
+      <path d="M252 122 q22 38 0 76"/><path d="M284 96 q40 64 0 128"/><path d="M316 70 q58 90 0 180"/>
+    </g></svg>`;
+  const FILM = `<svg viewBox="0 0 480 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A video clip">
+    <rect width="480" height="270" fill="#101a4a"/><rect x="40" y="40" width="400" height="190" rx="14" fill="#16246a" stroke="#2e3f99" stroke-width="3"/>
+    <path d="M214 104 l62 31 l-62 31 z" fill="#f2b632"/></svg>`;
+  function viewMedia(m, q) {
+    if (!m) return "";
+    const key = mediaKey(q);
+    if (m.type === "video" && m.youtube) {
+      return `<div class="media player" data-live="${key}"><div class="poster">${m.svg || FILM}</div>
+        <button class="playbig" data-play="youtube" data-src="${esc(ytURL(m, true))}">▶ ${esc(m.label || "Play the clip")}</button></div>`;
+    }
+    if (m.type === "video" && m.src) {
+      return `<div class="media player" data-live="${key}"><video controls preload="metadata" playsinline src="${esc(m.src)}"${m.poster ? ` poster="${esc(m.poster)}"` : ""}></video></div>`;
+    }
+    if (m.type === "audio") {
+      return `<div class="media player audio" data-live="${key}"><div class="poster">${m.svg || SPEAKER}</div>
+        <button class="playbig" data-play="sound" ${m.sound ? `data-sound="${esc(m.sound)}"` : `data-src="${esc(m.src || "")}"`}>▶ ${esc(m.label || "Play the sound")}</button></div>`;
+    }
+    return `<div class="media" data-live="${key}">${m.svg || ""}</div>`;
+  }
+  // Under the question: how to get sound to the class, and a way out if a clip won't play here.
   function viewClip(m) {
-    if (!m || m.type !== "video") return "";
-    return `<div class="clip"><a href="${esc(m.url)}" target="_blank" rel="noopener">▶ ${esc(m.label || "Play the clip")}</a><small>${esc(m.note || "Opens in a new tab.")}</small></div>`;
+    if (!m || (m.type !== "video" && m.type !== "audio")) return "";
+    const out = m.type === "video" && m.youtube ? `<a href="${esc(ytURL(m, false))}" target="_blank" rel="noopener">Open on YouTube</a>` : m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noopener">Open the clip</a>` : "";
+    const note = m.note || (WATCH ? "Plays on this device only." : "On Zoom, turn on Share sound when you share your screen.");
+    return `<div class="clip">${out}<small>${esc(note)}</small></div>`;
+  }
+  // Start a clip or a sound in place. No re-render: the element stays put while the game updates around it.
+  function playMedia(b) {
+    const box = b.closest(".media");
+    if (!box) return;
+    if (b.dataset.play === "youtube") {
+      box.innerHTML = `<iframe src="${esc(b.dataset.src)}" title="Video clip" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+      box.classList.add("on");
+      return;
+    }
+    let secs = 0;
+    if (b.dataset.sound && typeof DJ_SOUNDS !== "undefined") secs = DJ_SOUNDS.play(b.dataset.sound);
+    else if (b.dataset.src) { try { const a = new Audio(b.dataset.src); a.play(); a.addEventListener("loadedmetadata", () => { clearTimeout(box._t); box._t = setTimeout(() => box.classList.remove("playing"), a.duration * 1000); }); secs = 30; } catch (e) { secs = 0; } }
+    if (!secs) return;
+    box.classList.add("playing");
+    b.textContent = "▶ Play it again";
+    clearTimeout(box._t);
+    box._t = setTimeout(() => box.classList.remove("playing"), secs * 1000);
   }
   function viewExplain(q) {
     return `<div class="explain"><span><b>${LETTERS[q.answer]}. ${esc(q.options[q.answer])}.</b> ${esc(q.why)}</span>${q.src ? `<cite>${esc(q.src)}</cite>` : ""}</div>`;
@@ -917,7 +1098,7 @@
       const how = live() ? "Captains, enter your wager on your team's device." : "Captains, DM the host your wager.";
       return `<section class="stage"><div class="splash">
         <h2>${cell.final ? "Final<br>Jeopardy" : "Daily<br>Double"}</h2>
-        <span class="tag">${esc(q.cat)}${q.media ? (q.media.type === "video" ? " · Video" : " · Visual") : ""}</span>
+        <span class="tag">${esc(q.cat)}${q.media ? ({ video: " · Video", audio: " · Sound" }[q.media.type] || " · Visual") : ""}</span>
         <p>${how} ${cell.final ? "Bet any part of your score." : `Bet up to your score, or up to ${fmt(boardTop(S.ri))} if you have less.`}</p>
       </div></section>`;
     }
@@ -935,7 +1116,7 @@
     if (q.media) {
       return `
     <section class="stage media-stage ${r.revealed ? "revealed" : ""}">
-      ${viewMedia(q.media)}
+      ${viewMedia(q.media, q)}
       <div class="side">
         <div class="qtext">${heading}${viewClip(q.media)}</div>
         ${options}
@@ -1039,6 +1220,7 @@
         <button class="btn ${done && !left ? "primary" : ""}" data-act="endround">End ${ROUND_NAMES[S.ri] || "round"} and show standings</button>
         ${left ? `<button class="btn special" data-act="special">Roll a Special for ${esc(S.teams[nextSpecialTeam(S.ri)].name)}<kbd>P</kbd></button>` : ""}
         <span class="spacer"></span>
+        ${squaresDone(S.ri) < S.cfg.cats * S.cfg.rows ? `<span class="hint">Click a category name to change it</span>` : ""}
         <button class="btn" data-act="key">Answer key</button>
         <button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button>
         <button class="btn" data-act="menu">Menu</button>
@@ -1065,6 +1247,7 @@
         <button class="btn" data-act="menu">Menu</button>
       </footer>`;
     }
+    const q = cell.q;
     let main = "Reveal answer", key = "R";
     if (!r.shown) main = "Show the question";
     else if (!r.startedAt) { main = "Start clock"; key = "Space"; }
@@ -1073,7 +1256,8 @@
     return `<footer class="hostbar">
       <button class="btn" data-act="board">${back}<kbd>B</kbd></button>
       <button class="btn primary" data-act="main">${main}<kbd>${key}</kbd></button>
-      ${cell.bonus && !r.revealed ? `<button class="btn" data-act="newq">New question</button>` : ""}
+      ${canNewQ(cell, r) ? `<button class="btn" data-act="newq">New question<kbd>N</kbd></button>` : ""}
+      ${!r.revealed && r.shown && gamePast().has(q.q) ? `<span class="chip played">Played in an earlier game</span>` : ""}
       ${r.revealed ? autoChip() : ""}
       <span class="spacer"></span>
       <button class="btn" data-act="scores">Scoreboard<kbd>S</kbd></button>
@@ -1081,6 +1265,7 @@
     </footer>`;
   }
 
+  function canNewQ(cell, r) { return !r.revealed && (cell.bonus || (r.shown && !r.startedAt)); }
   function autoChip() {
     if (!autoBack || autoBack.key !== S.cur) return "";
     return `<span class="autoback"><span id="autoback">Back to the board in ${Math.max(0, Math.ceil((autoBack.at - Date.now()) / 1000))}</span><button class="btn" data-act="stayhere">Stay here</button></span>`;
@@ -1179,7 +1364,8 @@
 
   function keyHTML() {
     const rows = [];
-    const row = (label, q) => `<tr><td class="v">${label}</td><td class="l">${LETTERS[q.answer]}</td><td><b>${esc(q.options[q.answer])}</b><div class="qq">${esc(q.q)}</div></td></tr>`;
+    const past = gamePast();
+    const row = (label, q) => `<tr><td class="v">${label}</td><td class="l">${LETTERS[q.answer]}</td><td><b>${esc(q.options[q.answer])}</b><div class="qq">${esc(q.q)}${past.has(q.q) ? " <i>(played in an earlier game)</i>" : ""}</div></td></tr>`;
     S.rounds.forEach((round, ri) => {
       rows.push(`<h2>${ROUND_NAMES[ri] || "Round " + (ri + 1)}</h2>`);
       round.cols.forEach(col => {
@@ -1194,17 +1380,56 @@
     rows.push(sp.length ? `<table>${sp.map(k => row(esc(S.teams[S.specials[k].team].name), S.specials[k].q)).join("")}</table>` : `<p>Specials are drawn when they're rolled. Open the key again after rolling one to see its answer.</p>`);
     return rows.join("");
   }
+  let keyWin = null;
+  // After a swap, rewrite the answer key window if it's open, without bringing it to the front.
+  function refreshKey() {
+    try { if (keyWin && !keyWin.closed && keyWin.document) { const b = keyWin.document.getElementById("keybody"); if (b) b.innerHTML = keyHTML(); } } catch (e) { /* closed */ }
+  }
   function openKey() {
     const css = `body{font:14px/1.4 system-ui,sans-serif;margin:24px;color:#111;background:#fff}h1{margin:0 0 4px}h2{margin:24px 0 4px;border-bottom:2px solid #111}h3{margin:14px 0 4px}table{border-collapse:collapse;width:100%}td{border-top:1px solid #ddd;padding:5px 8px;vertical-align:top}td.v{width:110px;white-space:nowrap;color:#555}td.l{width:24px;font-weight:800;font-size:16px}.qq{color:#555;font-size:12px}`;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Design Jeopardy answer key</title><style>${css}</style></head><body><h1>Design Jeopardy answer key</h1><p>Letters match this game's boards.</p>${keyHTML()}</body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Design Jeopardy answer key</title><style>${css}</style></head><body><h1>Design Jeopardy answer key</h1><p>Letters match this game's boards. This window updates when you change a category or a question.</p><div id="keybody">${keyHTML()}</div></body></html>`;
     let w = null;
     try { w = window.open("", "design-jeopardy-key"); } catch (e) { w = null; }
-    if (w && w.document) { w.document.open(); w.document.write(html); w.document.close(); return; }
+    if (w && w.document) { keyWin = w; w.document.open(); w.document.write(html); w.document.close(); return; }
     overlay = "key"; render();
+  }
+
+  // Change one category on the board, or keep it and get new questions.
+  function viewSwapCat() {
+    const ri = S.ri, c = swapCol, col = S.rounds[ri].cols[c];
+    const doneIn = col.cells.filter((cell, k) => { const r = S.res[`${ri}-${c}-${k}`]; return r && r.done; }).length;
+    const game = inGame(), past = gamePast(), lastC = lastCats();
+    const onBoard = new Set(S.rounds[ri].cols.map(x => x.cat));
+    const newLeft = cat => cat.qs.filter(q => !game.has(q.q) && !past.has(q.q)).length;
+    const elsewhere = name => S.rounds.map((round, i) => i !== ri && round.cols.some(x => x.cat === name) ? (ROUND_NAMES[i] || "Round " + (i + 1)) : null).filter(Boolean);
+    const skip = new Set(S.cfg.skipCats || []);
+    const others = BANK.filter(cat => !onBoard.has(cat.cat)).sort((a, b) => (skip.has(a.cat) - skip.has(b.cat)) || (lastC.has(a.cat) - lastC.has(b.cat)) || (newLeft(b) - newLeft(a)));
+    const same = bankCat(col.cat);
+    const sameLeft = same ? newLeft(same) : 0;
+    const choices = others.map(cat => {
+      const tags = [];
+      if (lastC.has(cat.cat)) tags.push("Last game");
+      elsewhere(cat.cat).forEach(n => tags.push("Also in " + n));
+      if (skip.has(cat.cat)) tags.push("Left out in setup");
+      const n = newLeft(cat);
+      return `<button class="catchip" data-refill="${esc(cat.cat)}" ${doneIn ? "disabled" : ""}><span class="catchip-name">${esc(cat.cat)}</span><small>${n} new question${n === 1 ? "" : "s"}</small>${tags.map(t => `<span class="tagsmall">${esc(t)}</span>`).join("")}</button>`;
+    }).join("");
+    return `<div class="overlay" data-close><div class="panel swapcat" role="dialog" aria-label="Change a category">
+      <div class="row between"><h2>Change ${esc(col.cat)}</h2><button class="btn" data-act="close">Close<kbd>Esc</kbd></button></div>
+      <div class="row">
+        <button class="btn primary" data-refill="${esc(col.cat)}">Keep ${esc(col.cat)}, draw new questions</button>
+        <span class="note">${sameLeft} new question${sameLeft === 1 ? "" : "s"} left in it${doneIn ? `. The ${doneIn} played square${doneIn === 1 ? "" : "s"} stay as they are` : ""}.</span>
+      </div>
+      <h3>Or switch to</h3>
+      ${doneIn ? `<p class="note">Someone has played a square in this category, so it can't switch. You can still draw new questions for the squares that are left.</p>` : ""}
+      <div class="catchips">${choices || `<p class="note">Every category is already on this board.</p>`}</div>
+      <p class="note">Daily Doubles keep their own question. To change one, open it and click New question.</p>
+    </div></div>`;
   }
 
   function viewOverlay() {
     if (WATCH) return "";
+    if (overlay === "swapcat") return viewSwapCat();
     if (overlay === "endcheck") {
       const left = specialsLeft(S.ri);
       const names = S.teams.map((tm, t) => specDone(S.ri).includes(t) ? null : tm.name).filter(Boolean);
@@ -1270,7 +1495,9 @@
     else if (S.view === "question") body += viewQuestion() + viewTeams() + viewHost();
     else if (S.view === "results") body += viewResults() + viewHost();
     else body += viewEnd();
+    const playing = app.querySelector(".media[data-live]");
     app.innerHTML = body + viewOverlay() + viewCelebration();
+    if (playing) { const slot = app.querySelector(`.media[data-live="${playing.dataset.live}"]`); if (slot) slot.replaceWith(playing); }
     paintClock();
     drawQR();
     fitHeads();
@@ -1288,6 +1515,8 @@
     });
   }
   addEventListener("resize", () => { if (S && S.view === "board") fitHeads(); });
+
+  app.addEventListener("click", e => { const b = e.target.closest("[data-play]"); if (b) playMedia(b); });
 
   // ---------- watching ----------
   let watchCode = "", watchMsg = "", lastWatchIn = "";
@@ -1371,7 +1600,7 @@
     const el = e.target;
     if (["rounds", "cats", "rows", "secs", "autoBack"].includes(el.id)) { draft[el.id] = Number(el.value); render(); }
     if (el.id === "mode") { draft.mode = el.value; setupError = ""; render(); }
-    if (el.id === "final" || el.id === "specials") { draft[el.id] = el.value === "1"; render(); }
+    if (el.id === "final" || el.id === "specials" || el.id === "fresh") { draft[el.id] = el.value === "1"; render(); }
     if (el.id === "special-team") { act(() => { const cell = cellAt(S.cur); if (cell && cell.bonus) cell.team = Number(el.value); }); }
     if (el.dataset.wager != null) {
       const t = Number(el.dataset.wager), r = res(S.cur);
@@ -1396,6 +1625,13 @@
     if (d.remove != null) { draft.names.splice(Number(d.remove), 1); render(); return; }
     if (b.id === "timer") { startClock(); return; }
 
+    if (d.skipcat != null) {
+      const skip = new Set(draft.skipCats || []);
+      if (skip.has(d.skipcat)) skip.delete(d.skipcat); else skip.add(d.skipcat);
+      draft.skipCats = Array.from(skip); setupError = ""; render(); return;
+    }
+    if (d.swapcat != null) { swapCol = Number(d.swapcat); overlay = "swapcat"; render(); return; }
+    if (d.refill != null) { overlay = null; act(() => refillColumn(S.ri, swapCol, d.refill)); refreshKey(); return; }
     if (d.cell) { if (!(S.res[d.cell] && S.res[d.cell].done)) act(() => openCell(d.cell)); return; }
     if (d.pick) { const [t, i] = d.pick.split(":").map(Number); act(() => { const r = res(S.cur); if (!r.revealed) r.picks[t] = i; }); return; }
     if (d.unpick != null) { act(() => { const r = res(S.cur); if (!r.revealed) delete r.picks[Number(d.unpick)]; }); return; }
@@ -1408,7 +1644,10 @@
       case "board": act(backToBoard); break;
       case "special": { const t = nextSpecialTeam(S.ri); if (t != null) act(() => startSpecial(t)); break; }
       case "skipspecial": act(skipSpecial); break;
-      case "newq": act(newSpecialQuestion); break;
+      case "newq": act(newQuestion); refreshKey(); break;
+      case "forget":
+        if (!confirmForget) { confirmForget = true; render(); break; }
+        confirmForget = false; saveHistory({ games: [] }); render(); break;
       case "tostart": act(() => { S.view = "board"; }); break;
       case "endround":
         if (specialsLeft(S.ri)) { overlay = "endcheck"; render(); }
@@ -1445,6 +1684,7 @@
     if (e.key === " ") { e.preventDefault(); if (r.whammy) return; if (!r.rolled) stopRoll(); else if (r.shown && !r.startedAt) startClock(); }
     else if (e.key === "r" || e.key === "R" || e.key === "Enter") mainAction();
     else if (e.key === "b" || e.key === "B") act(backToBoard);
+    else if ((e.key === "n" || e.key === "N") && canNewQ(cellAt(S.cur), r)) { act(newQuestion); refreshKey(); }
   });
 
   render();
